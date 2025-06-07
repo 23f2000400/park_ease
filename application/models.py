@@ -1,9 +1,9 @@
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import UserMixin
+from flask_security import UserMixin, RoleMixin
 from werkzeug.security import generate_password_hash
 from datetime import datetime
-import uuid  # Needed for generating unique fs_uniquifier
- 
+import uuid
+
 from .database import db  # Importing db from the database module
 
 
@@ -12,18 +12,43 @@ class User(UserMixin, db.Model):
     __tablename__ = 'user'
     
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
+    name= db.Column(db.String(100), nullable=False)
+    username = db.Column(db.String(50), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
     phone = db.Column(db.String(20), nullable=True)  # Made nullable
-    role = db.Column(db.String(20), default='user')  # 'admin' or 'user'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    reservations = db.relationship('Reservation', backref='user', lazy=True)
+    reservations = db.relationship('Reservation', backref='reserved_by', lazy='dynamic')
     fs_uniquifier = db.Column(db.String(64), unique=True, nullable=False, default=lambda: str(uuid.uuid4()))  # Auto-generated UUID
     active = db.Column(db.Boolean, default=True)
+    roles = db.relationship('Role', secondary='user_roles', backref=db.backref('users', lazy='dynamic'))
+
+    def __repr__(self):
+        return f'<User {self.email}>'
+
+
+class Role(RoleMixin, db.Model):
+    """Role model for user roles"""
+    __tablename__ = 'role'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)
+    description = db.Column(db.String(200), nullable=True)
     
     def __repr__(self):
-        return f'<User {self.username}>'
+        return f'<Role {self.name}>'
+
+
+class UserRoles(db.Model):
+    """Association table for many-to-many relationship between users and roles"""
+    __tablename__ = 'user_roles'
+    
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    role_id = db.Column(db.Integer, db.ForeignKey('role.id'), primary_key=True)
+    
+    def __repr__(self):
+        return f'<UserRoles User {self.user_id} Role {self.role_id}>'
+
 
 class ParkingLot(db.Model):
     """Parking lot model"""
@@ -36,20 +61,24 @@ class ParkingLot(db.Model):
     price = db.Column(db.Float, nullable=False)  # Price per hour
     total_spots = db.Column(db.Integer, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    spots = db.relationship('ParkingSpot', backref='lot', lazy=True, cascade='all, delete-orphan')
+    spots = db.relationship('ParkingSpot', backref='parking_lot', lazy='dynamic', cascade='all, delete-orphan')
     
     def __repr__(self):
         return f'<ParkingLot {self.name}>'
-    
+
     def create_spots(self):
         """Create parking spots when a new lot is added"""
+        if not isinstance(self.total_spots, int) or self.total_spots <= 0:
+            raise ValueError("total_spots must be a positive integer")
         for i in range(1, self.total_spots + 1):
             spot = ParkingSpot(
                 lot_id=self.id,
                 spot_number=i,
-                status='A'  # Available
+                status='A'
             )
             db.session.add(spot)
+        db.session.commit()
+
 
 class ParkingSpot(db.Model):
     """Individual parking spot model"""
@@ -59,10 +88,11 @@ class ParkingSpot(db.Model):
     lot_id = db.Column(db.Integer, db.ForeignKey('parking_lot.id'), nullable=False)
     spot_number = db.Column(db.Integer, nullable=False)
     status = db.Column(db.String(1), default='A')  # 'A' = Available, 'O' = Occupied
-    reservation = db.relationship('Reservation', backref='spot', uselist=False, lazy=True)
+    reservation = db.relationship('Reservation', backref='parking_spot', uselist=False, lazy='select')
     
     def __repr__(self):
         return f'<ParkingSpot {self.spot_number} in Lot {self.lot_id}>'
+
 
 class Reservation(db.Model):
     """Parking spot reservation model"""
@@ -78,81 +108,3 @@ class Reservation(db.Model):
     
     def __repr__(self):
         return f'<Reservation {self.id} for User {self.user_id}>'
-    
-    def calculate_cost(self):
-        """Calculate parking cost based on time spent"""
-        if self.check_out:
-            duration = (self.check_out - self.check_in).total_seconds() / 3600  # hours
-            return round(duration * self.spot.lot.price, 2)
-        return 0
-
-def init_db(app):
-    """Initialize the database with required tables and admin user"""
-    with app.app_context():
-        db.create_all()
-        
-        # Create admin user if not exists
-        if not User.query.filter_by(role='admin').first():
-            admin = User(
-                username='admin',
-                email='admin@parking.com',
-                password=generate_password_hash('admin123'),
-                role='admin',
-                phone='+1234567890',
-                fs_uniquifier=str(uuid.uuid4())  # Added fs_uniquifier for admin
-            )
-            db.session.add(admin)
-            db.session.commit()
-            print("Created admin user with username 'admin' and password 'admin123'")
-
-        # Create test user if not exists (fixed username mismatch)
-        if not User.query.filter_by(username='testuser').first():
-            test_user = User(
-                username='testuser',  # Consistent username
-                email='user@test.com',  # Changed from piyush@gmail.com to match test context
-                password=generate_password_hash('test123'),
-                phone='+9876543210',
-                role='user',
-                active=True,
-                fs_uniquifier=str(uuid.uuid4())  # Auto-generated UUID
-            )
-            db.session.add(test_user)
-            db.session.commit()
-        
-        print("Database initialized. Admin and test users created if not exists.")
-
-def seed_test_data(app):
-    """Seed the database with test data (optional, for development)"""
-    with app.app_context():
-        # Check if we already have test data
-        if ParkingLot.query.count() > 2:  # If more than our test lots exist
-            print("Test data already exists. Skipping seeding.")
-            return
-            
-        # Add test parking lots if none exist
-        if not ParkingLot.query.first():
-            lot1 = ParkingLot(
-                name="Downtown Parking",
-                address="123 Main Street",
-                pincode="100001",
-                price=50.0,
-                total_spots=20
-            )
-            db.session.add(lot1)
-            
-            lot2 = ParkingLot(
-                name="Mall Parking",
-                address="456 Shopping Avenue",
-                pincode="100002",
-                price=30.0,
-                total_spots=30
-            )
-            db.session.add(lot2)
-            
-            db.session.commit()
-            
-            # Create spots for the lots
-            lot1.create_spots()
-            lot2.create_spots()
-            
-            print("Added test data: 2 parking lots with spots")
