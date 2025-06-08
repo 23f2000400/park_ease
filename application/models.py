@@ -3,29 +3,39 @@ from flask_security import UserMixin, RoleMixin
 from werkzeug.security import generate_password_hash
 from datetime import datetime
 import uuid
+from enum import Enum
 
 from .database import db  # Importing db from the database module
 
+# Enum for status values
+class SpotStatus(Enum):
+    AVAILABLE = 'A'
+    OCCUPIED = 'O'
+
+class ReservationStatus(Enum):
+    ACTIVE = 'active'
+    COMPLETED = 'completed'
+    CANCELLED = 'cancelled'
 
 class User(UserMixin, db.Model):
     """User model for both admin and regular users"""
     __tablename__ = 'user'
     
     id = db.Column(db.Integer, primary_key=True)
-    name= db.Column(db.String(100), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
     username = db.Column(db.String(50), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
-    phone = db.Column(db.String(20), nullable=True)  # Made nullable
+    phone = db.Column(db.String(20), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     reservations = db.relationship('Reservation', backref='reserved_by', lazy='dynamic')
-    fs_uniquifier = db.Column(db.String(64), unique=True, nullable=False, default=lambda: str(uuid.uuid4()))  # Auto-generated UUID
+    fs_uniquifier = db.Column(db.String(64), unique=True, nullable=False, default=lambda: str(uuid.uuid4()))
     active = db.Column(db.Boolean, default=True)
     roles = db.relationship('Role', secondary='user_roles', backref=db.backref('users', lazy='dynamic'))
 
     def __repr__(self):
         return f'<User {self.email}>'
-
 
 class Role(RoleMixin, db.Model):
     """Role model for user roles"""
@@ -38,7 +48,6 @@ class Role(RoleMixin, db.Model):
     def __repr__(self):
         return f'<Role {self.name}>'
 
-
 class UserRoles(db.Model):
     """Association table for many-to-many relationship between users and roles"""
     __tablename__ = 'user_roles'
@@ -49,7 +58,6 @@ class UserRoles(db.Model):
     def __repr__(self):
         return f'<UserRoles User {self.user_id} Role {self.role_id}>'
 
-
 class ParkingLot(db.Model):
     """Parking lot model"""
     __tablename__ = 'parking_lot'
@@ -58,27 +66,51 @@ class ParkingLot(db.Model):
     name = db.Column(db.String(100), nullable=False)
     address = db.Column(db.String(200), nullable=False)
     pincode = db.Column(db.String(10), nullable=False)
-    price = db.Column(db.Float, nullable=False)  # Price per hour
+    price = db.Column(db.Numeric(10, 2), nullable=False)  # More precise for monetary values
     total_spots = db.Column(db.Integer, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    spots = db.relationship('ParkingSpot', backref='parking_lot', lazy='dynamic', cascade='all, delete-orphan')
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    spots = db.relationship('ParkingSpot', backref='lot', lazy='dynamic', cascade='all, delete-orphan')
     
     def __repr__(self):
         return f'<ParkingLot {self.name}>'
 
     def create_spots(self):
         """Create parking spots when a new lot is added"""
-        if not isinstance(self.total_spots, int) or self.total_spots <= 0:
-            raise ValueError("total_spots must be a positive integer")
         for i in range(1, self.total_spots + 1):
             spot = ParkingSpot(
                 lot_id=self.id,
                 spot_number=i,
-                status='A'
+                status=SpotStatus.AVAILABLE.value
             )
             db.session.add(spot)
         db.session.commit()
 
+    def update_spots(self, new_total):
+        """Update the number of spots in this lot"""
+        current_count = self.spots.count()
+        
+        if new_total > current_count:
+            # Add new spots
+            for i in range(current_count + 1, new_total + 1):
+                spot = ParkingSpot(
+                    lot_id=self.id,
+                    spot_number=i,
+                    status=SpotStatus.AVAILABLE.value
+                )
+                db.session.add(spot)
+        elif new_total < current_count:
+            # Remove spots (only if they're available)
+            spots_to_remove = self.spots.filter(
+                ParkingSpot.spot_number > new_total,
+                ParkingSpot.status == SpotStatus.AVAILABLE.value
+            ).all()
+            
+            for spot in spots_to_remove:
+                db.session.delete(spot)
+        
+        self.total_spots = new_total
+        db.session.commit()
 
 class ParkingSpot(db.Model):
     """Individual parking spot model"""
@@ -87,12 +119,12 @@ class ParkingSpot(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     lot_id = db.Column(db.Integer, db.ForeignKey('parking_lot.id'), nullable=False)
     spot_number = db.Column(db.Integer, nullable=False)
-    status = db.Column(db.String(1), default='A')  # 'A' = Available, 'O' = Occupied
-    reservation = db.relationship('Reservation', backref='parking_spot', uselist=False, lazy='select')
+    status = db.Column(db.String(1), default=SpotStatus.AVAILABLE.value)
+    reservation = db.relationship('Reservation', backref='spot', uselist=False, 
+                                lazy='select', cascade='all, delete-orphan')
     
     def __repr__(self):
         return f'<ParkingSpot {self.spot_number} in Lot {self.lot_id}>'
-
 
 class Reservation(db.Model):
     """Parking spot reservation model"""
@@ -103,8 +135,10 @@ class Reservation(db.Model):
     spot_id = db.Column(db.Integer, db.ForeignKey('parking_spot.id'), nullable=False)
     check_in = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     check_out = db.Column(db.DateTime)
-    cost = db.Column(db.Float)
-    status = db.Column(db.String(20), default='active')  # 'active', 'completed', 'cancelled'
+    cost = db.Column(db.Numeric(10, 2))  # More precise for monetary values
+    status = db.Column(db.String(20), default=ReservationStatus.ACTIVE.value)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     def __repr__(self):
         return f'<Reservation {self.id} for User {self.user_id}>'

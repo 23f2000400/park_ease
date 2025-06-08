@@ -1,7 +1,10 @@
 from flask import Flask
-from flask_security import Security, SQLAlchemyUserDatastore, hash_password
+from flask_security import Security, SQLAlchemyUserDatastore
+from werkzeug.security import generate_password_hash, check_password_hash
 from application.database import db
 from application.models import User, Role, ParkingLot, ParkingSpot, UserRoles
+from application.resources import *
+from application.resources import api
 from application.config import LocalDevelopmentConfig
 import uuid
 import sqlalchemy.exc
@@ -14,6 +17,7 @@ def create_app():
 
     # Initialize database
     db.init_app(app)
+    api.init_app(app)
 
     # Initialize Flask-Security with correct User and Role models
     datastore = SQLAlchemyUserDatastore(db, User, Role)
@@ -47,7 +51,7 @@ with app.app_context():
                 email="admin@gmail.com",
                 name="Admin User",
                 username="admin",
-                password=hash_password("admin123"),
+                password=generate_password_hash("admin123"),
                 roles=['admin'],  # Use the role object
                 phone="1234567890",
                 active=True,
@@ -60,7 +64,7 @@ with app.app_context():
                 email="user@gmail.com",
                 name="Regular User",
                 username="user",
-                password=hash_password("user123"),
+                password=generate_password_hash("user123"),
                 roles=['user'],  # Use the role object
                 phone="1234567800",
                 active=True,
