@@ -112,12 +112,12 @@ export default {
       <div class="col-md-6 text-center text-md-start">
         <h3 class="fw-bold">POPULAR CITIES<span style="color: #ffa500;">.</span></h3>
         <ul class="list-unstyled mt-3 mb-4 fs-5">
-          <li><i class="fas fa-circle text-warning me-2" style="font-size: 0.6rem;"></i> Delhi</li>
-          <li><i class="fas fa-circle text-warning me-2" style="font-size: 0.6rem;"></i> Mumbai</li>
-          <li><i class="fas fa-circle text-warning me-2" style="font-size: 0.6rem;"></i> Kolkata</li>
-          <li><i class="fas fa-circle text-warning me-2" style="font-size: 0.6rem;"></i> Banguluru</li>
-          <li><i class="fas fa-circle text-warning me-2" style="font-size: 0.6rem;"></i> Chennai</li>
-          <li><i class="fas fa-circle text-warning me-2" style="font-size: 0.6rem;"></i> Hydrabad</li>
+          <li><i class="fas fa-circle text-warning me-2" style="font-size: 0.6rem;"></i>🏙 Delhi</li>
+          <li><i class="fas fa-circle text-warning me-2" style="font-size: 0.6rem;"></i>🏙 Mumbai</li>
+          <li><i class="fas fa-circle text-warning me-2" style="font-size: 0.6rem;"></i>🏙 Kolkata</li>
+          <li><i class="fas fa-circle text-warning me-2" style="font-size: 0.6rem;"></i>🏙 Banguluru</li>
+          <li><i class="fas fa-circle text-warning me-2" style="font-size: 0.6rem;"></i>🏙 Chennai</li>
+          <li><i class="fas fa-circle text-warning me-2" style="font-size: 0.6rem;"></i>🏙 Hydrabad</li>
         </ul>
         <button class="btn btn-danger btn-lg px-4">FIND YOUR CITY</button>
       </div>
@@ -143,7 +143,7 @@ export default {
         <h2 class="text-center fw-bold mb-5">Why Choose Park Ease?</h2>
         <div class="row g-4">
           <div class="col-md-4">
-                <div class="feature-card p-4 rounded shadow-sm" style="background-color:rgb(161, 141, 255);">
+                <div class="feature-card p-4 rounded shadow-sm" style="background-color:rgb(200, 141, 255);">
               <i class="fas fa-map-marked-alt fa-3x text-primary mb-3"></i>
               <h4 class="fw-bold">Live Spot Availability</h4>
               <p class="text-muted">See live parking availability in real time based on your location.</p>

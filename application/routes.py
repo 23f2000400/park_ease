@@ -29,7 +29,7 @@ def user_dashboard():
 @app.route('/api/register', methods=['POST'])
 def register_user():
     credentials = request.get_json()
-    if not app.security.datastore.find_user(email=credentials['email']):
+    if not app.security.datastore.find_user(email=credentials['email']) or not app.security.datastore.find_user(username=credentials['username']):
             app.security.datastore.create_user(
                 email= credentials['email'],
                 name= credentials['name'], 
