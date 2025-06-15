@@ -66,6 +66,46 @@ def login_user():
             slogin_user(user)
             return jsonify({"id":user.id,
                             "username": user.username,
-                            "auth-token":user.get_auth_token()}), 200
+                            "auth-token":user.get_auth_token(),
+                            "name":user.name,
+                                "roles": [role.name for role in user.roles]  # Return a list of roles
+                }), 200
         else:
             return jsonify({"message": "Invalid password"}), 401
+        
+@app.route('/api/logout', methods=['POST'])
+def logout_user():
+    """Logout the current user."""
+    if not current_user.is_authenticated:
+        return jsonify({"message": "User is not logged in"}), 401
+    
+    # Perform logout logic here
+    # For example, you might want to invalidate the user's session or token
+    # In Flask-Security, this is typically handled automatically
+    app.security.logout_user()
+    # Optionally, you can clear the current user
+    current_user = None
+    # Return a success message
+    app.security.datastore.commit()
+    # Clear the session or token if necessary
+    app.security.datastore.clear_session()
+    return jsonify({"message": "User logged out successfully"}), 200
+
+@app.route('/api/user/home', methods=['GET'])
+@auth_required('token')
+@roles_required('user')
+def get_user_info():
+    """Get the current user's information."""
+    if not current_user.is_authenticated:
+        return jsonify({"message": "User is not logged in"}), 401
+    
+    user = current_user
+    return jsonify({
+        "id": user.id,
+        "username": user.username,
+        "name": user.name,
+        "email": user.email,
+        "phone": user.phone,
+        "roles": [role.name for role in user.roles],  # Return a list of roles
+        "active": user.active
+    }), 200

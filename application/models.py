@@ -57,6 +57,8 @@ class UserRoles(db.Model):
     
     def __repr__(self):
         return f'<UserRoles User {self.user_id} Role {self.role_id}>'
+    
+
 
 class ParkingLot(db.Model):
     """Parking lot model"""
@@ -64,53 +66,21 @@ class ParkingLot(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
+    area = db.Column(db.String(100), nullable=False)
     address = db.Column(db.String(200), nullable=False)
     pincode = db.Column(db.String(10), nullable=False)
-    price = db.Column(db.Numeric(10, 2), nullable=False)  # More precise for monetary values
+    price = db.Column(db.Numeric(10, 2), nullable=False)
     total_spots = db.Column(db.Integer, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # One-to-many relationship to ParkingSpot
     spots = db.relationship('ParkingSpot', backref='lot', lazy='dynamic', cascade='all, delete-orphan')
-    
+
     def __repr__(self):
         return f'<ParkingLot {self.name}>'
 
-    def create_spots(self):
-        """Create parking spots when a new lot is added"""
-        for i in range(1, self.total_spots + 1):
-            spot = ParkingSpot(
-                lot_id=self.id,
-                spot_number=i,
-                status=SpotStatus.AVAILABLE.value
-            )
-            db.session.add(spot)
-        db.session.commit()
 
-    def update_spots(self, new_total):
-        """Update the number of spots in this lot"""
-        current_count = self.spots.count()
-        
-        if new_total > current_count:
-            # Add new spots
-            for i in range(current_count + 1, new_total + 1):
-                spot = ParkingSpot(
-                    lot_id=self.id,
-                    spot_number=i,
-                    status=SpotStatus.AVAILABLE.value
-                )
-                db.session.add(spot)
-        elif new_total < current_count:
-            # Remove spots (only if they're available)
-            spots_to_remove = self.spots.filter(
-                ParkingSpot.spot_number > new_total,
-                ParkingSpot.status == SpotStatus.AVAILABLE.value
-            ).all()
-            
-            for spot in spots_to_remove:
-                db.session.delete(spot)
-        
-        self.total_spots = new_total
-        db.session.commit()
 
 class ParkingSpot(db.Model):
     """Individual parking spot model"""
@@ -119,7 +89,7 @@ class ParkingSpot(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     lot_id = db.Column(db.Integer, db.ForeignKey('parking_lot.id'), nullable=False)
     spot_number = db.Column(db.Integer, nullable=False)
-    status = db.Column(db.String(1), default=SpotStatus.AVAILABLE.value)
+    status = db.Column(db.String(1), default='Available')
     reservation = db.relationship('Reservation', backref='spot', uselist=False, 
                                 lazy='select', cascade='all, delete-orphan')
     
@@ -135,6 +105,7 @@ class Reservation(db.Model):
     spot_id = db.Column(db.Integer, db.ForeignKey('parking_spot.id'), nullable=False)
     check_in = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     check_out = db.Column(db.DateTime)
+    vehicle_number = db.Column(db.String(20), nullable=False)
     cost = db.Column(db.Numeric(10, 2))  # More precise for monetary values
     status = db.Column(db.String(20), default=ReservationStatus.ACTIVE.value)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

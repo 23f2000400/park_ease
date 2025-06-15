@@ -61,8 +61,17 @@ export default {
             .then(data => {
                 localStorage.setItem('auth_token', data['auth-token']);
                 localStorage.setItem('id', data['id']);
+                localStorage.setItem('username', data.username);
+                localStorage.setItem('role', data['roles']); // Save roles if needed
+
                 alert('Login successful! You will be redirected to the home page.');
-                this.$router.push('/');
+                if (data.roles.includes('admin')) {
+                        this.$router.push('/admin/home');
+                    } else if (data.roles.includes('user')) {
+                        this.$router.push('/user/home');
+                    } else {
+                        alert('Unknown role. Contact support.');
+                    }            
             })
             .catch(err => {
                 alert(err.message || 'Login failed. Please check your credentials.');
