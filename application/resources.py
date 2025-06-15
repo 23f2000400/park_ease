@@ -236,9 +236,203 @@ class ReservationResource(Resource):
         except Exception as e:
             db.session.rollback()
             return {'message': str(e)}, 400
+        
+from flask_restful import Resource
+from flask import jsonify
+from flask_security import auth_required, current_user
+from datetime import datetime, timedelta
+from .models import Reservation, ParkingLot
+import random
+
+class UserBookingsResource(Resource):
+    @auth_required('token')
+    def get(self):
+        """Get all bookings for the current user with activity feed"""
+        try:
+            # Get user's reservations ordered by check-in date (newest first)
+            reservations = Reservation.query.filter_by(user_id=current_user.id)\
+                .order_by(Reservation.check_in.desc())\
+                .all()
+            
+            bookings = []
+            for res in reservations:
+                # Get associated parking lot details
+                lot = ParkingLot.query.get(res.spot.lot_id)
+                
+                bookings.append({
+                    'id': res.id,
+                    'status': res.status,
+                    'check_in': res.check_in.isoformat(),
+                    'check_out': res.check_out.isoformat() if res.check_out else None,
+                    'cost': float(res.cost) if res.cost else 0.0,
+                    'parking_lot': {
+                        'name': lot.name,
+                        'address': lot.address,
+                        'price': float(lot.price)
+                    },
+                    'vehicle_number': res.vehicle_number
+                })
+            
+            # Generate recent activities (mix of real and sample data)
+            recent_activities = self.generate_activities(bookings)
+            
+            return jsonify({
+                'bookings': bookings,
+                'recent_activities': recent_activities
+            })
+            
+        except Exception as e:
+            return {'message': str(e)}, 500
+    
+    def generate_activities(self, bookings):
+        """Generate a mix of real and sample activities"""
+        activities = []
+        
+        # Add real booking completions
+        for booking in bookings:
+            if booking['status'] == 'completed':
+                activities.append({
+                    'id': f"act-{booking['id']}",
+                    'type': 'success',
+                    'icon': 'fa-check',
+                    'message': f"Booking completed at {booking['parking_lot']['name']}",
+                    'timestamp': booking['check_out'],
+                    'amount': -float(booking['cost'])
+                })
+        
+        # Add sample activities (in a real app, these would come from a database)
+        sample_activities = [
+            {
+                'id': 'act-payment',
+                'type': 'primary',
+                'icon': 'fa-plus',
+                'message': 'Added new payment method',
+                'timestamp': (datetime.utcnow() - timedelta(days=1)).isoformat()
+            },
+            {
+                'id': 'act-promo',
+                'type': 'info',
+                'icon': 'fa-tag',
+                'message': 'Used promo code PARK20',
+                'timestamp': (datetime.utcnow() - timedelta(days=3)).isoformat(),
+                'amount': -5.00
+            },
+            {
+                'id': 'act-reminder',
+                'type': 'warning',
+                'icon': 'fa-exclamation',
+                'message': 'Received parking reminder',
+                'timestamp': (datetime.utcnow() - timedelta(days=5)).isoformat()
+            }
+        ]
+        
+        # Merge and sort by timestamp (newest first)
+        activities.extend(sample_activities)
+        activities.sort(key=lambda x: x['timestamp'], reverse=True)
+        
+        return activities[:5]  # Return only 5 most recent
+
+
+class UserProfileResource(Resource):
+    @auth_required('token')
+    def get(self):
+        """Get profile details for the current user"""
+        try:
+            # Get the current user's details
+            user_data = {
+                'id': current_user.id,
+                'name': current_user.name,
+                'email': current_user.email,
+                'username': current_user.username,
+                'phone': current_user.phone,
+                'created_at': current_user.created_at.isoformat(),
+                'membership_tier': self.get_membership_tier(current_user),
+                'stats': self.get_user_stats(current_user.id)
+            }
+            
+            return jsonify(user_data)
+            
+        except Exception as e:
+            return {'message': str(e)}, 500
+    
+    def get_membership_tier(self, user):
+        """Determine membership tier based on user's activity"""
+        # In a real app, this would query the database for actual usage
+        if user.has_role('premium'):
+            return 'Premium'
+        elif user.has_role('vip'):
+            return 'VIP'
+        else:
+            # Default tier logic based on account age
+            account_age = (datetime.utcnow() - user.created_at).days
+            if account_age > 365:
+                return 'Gold'
+            elif account_age > 180:
+                return 'Silver'
+            else:
+                return 'Basic'
+    
+    def get_user_stats(self, user_id):
+        """Get user statistics (bookings, spending, etc.)"""
+        from .models import Reservation
+        from sqlalchemy import func
+        
+        # Get booking counts
+        total_bookings = Reservation.query.filter_by(user_id=user_id).count()
+        active_bookings = Reservation.query.filter_by(
+            user_id=user_id, 
+            status='active'
+        ).count()
+        completed_bookings = Reservation.query.filter_by(
+            user_id=user_id, 
+            status='completed'
+        ).count()
+        
+        # Get total spending
+        total_spent_result = db.session.query(
+            func.sum(Reservation.cost)
+        ).filter(
+            Reservation.user_id == user_id,
+            Reservation.status == 'completed'
+        ).first()
+        
+        total_spent = float(total_spent_result[0]) if total_spent_result[0] else 0.0
+        
+        return {
+            'total_bookings': total_bookings,
+            'active_bookings': active_bookings,
+            'completed_bookings': completed_bookings,
+            'total_spent': total_spent,
+            'favorite_lot': self.get_favorite_parking_lot(user_id)
+        }
+    
+    def get_favorite_parking_lot(self, user_id):
+        """Determine user's most frequently used parking lot"""
+        from .models import Reservation, ParkingSpot, ParkingLot
+        from sqlalchemy import func, desc
+        
+        favorite = db.session.query(
+            ParkingLot.name,
+            func.count(Reservation.id).label('reservation_count')
+        ).join(
+            ParkingSpot, ParkingSpot.id == Reservation.spot_id
+        ).join(
+            ParkingLot, ParkingLot.id == ParkingSpot.lot_id
+        ).filter(
+            Reservation.user_id == user_id
+        ).group_by(
+            ParkingLot.name
+        ).order_by(
+            desc('reservation_count')
+        ).first()
+        
+        return favorite[0] if favorite else None
 
 
 # Register resources
 api.add_resource(ParkingLotResource, '/api/lots', '/api/lots/<int:lot_id>')
 api.add_resource(ParkingSpotResource, '/api/lots/<int:lot_id>/spots')
 api.add_resource(ReservationResource, '/api/reservations', '/api/reservations/<int:reservation_id>')
+api.add_resource(UserBookingsResource, '/api/user/bookings')
+api.add_resource(UserProfileResource, '/api/user/profile')
+

@@ -4,6 +4,7 @@ import Login from './components/Login.js';
 import NavBar from './components/Navbar.js';
 import Footer from './components/Footer.js';
 import UserHome from './components/UserHome.js';
+import AdminHome from './components/AdminHome.js';
 
 
 
@@ -12,6 +13,7 @@ const routes = [
     {path: '/login', component: Login},
     {path: '/register', component: Register},
     {path: '/user/home', component: UserHome, meta: { requiresAuth: true } },
+    {path: '/admin/home', component: AdminHome, meta: { requiresAuth: true, requiresAdmin: true } },
 ]
 
 const router = new VueRouter({

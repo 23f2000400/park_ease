@@ -8,21 +8,21 @@ export default {
                 <p class="last-login">Last login: {{ formatDate(new Date()) }}</p>
             </div>
             <div class="quick-stats">
-                <div class="stat-card">
+                <div class="stat-card" @click="showActiveOnly">
                     <div class="stat-icon bg-primary">
                         <i class="fas fa-car"></i>
                     </div>
                     <div class="stat-info">
-                        <h3>3</h3>
+                        <h3>{{ activeBookingsCount }}</h3>
                         <p>Active Bookings</p>
                     </div>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card" @click="showCompletedOnly">
                     <div class="stat-icon bg-success">
                         <i class="fas fa-check-circle"></i>
                     </div>
                     <div class="stat-info">
-                        <h3>12</h3>
+                        <h3>{{ completedBookingsCount }}</h3>
                         <p>Completed Trips</p>
                     </div>
                 </div>
@@ -31,7 +31,7 @@ export default {
                         <i class="fas fa-star"></i>
                     </div>
                     <div class="stat-info">
-                        <h3>Gold</h3>
+                        <h3>{{ userData.membership_tier || 'Basic' }}</h3>
                         <p>Membership Tier</p>
                     </div>
                 </div>
@@ -44,137 +44,97 @@ export default {
             <section class="quick-actions">
                 <h2 class="section-title">Quick Actions</h2>
                 <div class="action-grid">
-                    <button class="action-btn">
+                    <button class="action-btn" @click="navigateToNewBooking">
                         <i class="fas fa-plus-circle"></i>
                         <span>New Booking</span>
                     </button>
-                    <button class="action-btn">
+                    <button class="action-btn" @click="showAllBookings">
                         <i class="fas fa-calendar-alt"></i>
                         <span>My Bookings</span>
                     </button>
-                    <button class="action-btn">
+                    <button class="action-btn" @click="navigateToFindParking">
                         <i class="fas fa-map-marked-alt"></i>
                         <span>Find Parking</span>
                     </button>
-                    <button class="action-btn">
+                    <button class="action-btn" @click="navigateToPaymentMethods">
                         <i class="fas fa-wallet"></i>
                         <span>Payment Methods</span>
                     </button>
                 </div>
             </section>
 
-            <!-- Upcoming Bookings -->
+            <!-- Bookings Section -->
             <section class="upcoming-bookings">
                 <div class="section-header">
-                    <h2 class="section-title">Upcoming Bookings</h2>
-                    <a href="#" class="view-all">View All</a>
+                    <h2 class="section-title">
+                        <span class="booking-filter" :class="{active: currentFilter === 'all'}" @click="showAllBookings">All Bookings</span> |
+                        <span class="booking-filter" :class="{active: currentFilter === 'active'}" @click="showActiveOnly">Active</span> |
+                        <span class="booking-filter" :class="{active: currentFilter === 'completed'}" @click="showCompletedOnly">Completed</span>
+                    </h2>
+                    <span class="booking-count">{{ filteredBookings.length }} bookings</span>
                 </div>
-                <div class="booking-card featured">
+                
+                <div v-if="filteredBookings.length === 0" class="no-bookings">
+                    <i class="fas fa-calendar-times"></i>
+                    <p>No {{ currentFilter }} bookings found</p>
+                </div>
+                
+                <div v-for="booking in filteredBookings" :key="booking.id" 
+                     class="booking-card" :class="{featured: booking.status === 'active'}">
                     <div class="booking-info">
-                        <h3>Airport Parking</h3>
-                        <p class="location"><i class="fas fa-map-marker-alt"></i> JFK International Airport</p>
+                        <h3>{{ booking.parking_lot.name }}</h3>
+                        <p class="location">
+                            <i class="fas fa-map-marker-alt"></i> {{ booking.parking_lot.address }}
+                        </p>
                         <div class="booking-details">
                             <div class="detail">
                                 <i class="fas fa-calendar-day"></i>
-                                <span>Tomorrow, 9:00 AM</span>
+                                <span>{{ formatDateTime(booking.check_in) }}</span>
                             </div>
-                            <div class="detail">
+                            <div v-if="booking.check_out" class="detail">
                                 <i class="fas fa-clock"></i>
-                                <span>3 days</span>
+                                <span>{{ calculateDuration(booking.check_in, booking.check_out) }}</span>
                             </div>
                             <div class="detail">
                                 <i class="fas fa-dollar-sign"></i>
-                                <span>$42.00</span>
+                                <span>{{ formatCurrency(booking.cost) }}</span>
                             </div>
                         </div>
                     </div>
                     <div class="booking-actions">
-                        <button class="btn btn-sm btn-outline">Details</button>
-                        <button class="btn btn-sm btn-primary">Extend</button>
-                    </div>
-                </div>
-                <div class="booking-card">
-                    <div class="booking-info">
-                        <h3>Downtown Garage</h3>
-                        <p class="location"><i class="fas fa-map-marker-alt"></i> 123 Main Street</p>
-                        <div class="booking-details">
-                            <div class="detail">
-                                <i class="fas fa-calendar-day"></i>
-                                <span>Fri, Jun 18, 2:00 PM</span>
-                            </div>
-                            <div class="detail">
-                                <i class="fas fa-clock"></i>
-                                <span>5 hours</span>
-                            </div>
-                            <div class="detail">
-                                <i class="fas fa-dollar-sign"></i>
-                                <span>$18.50</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="booking-actions">
-                        <button class="btn btn-sm btn-outline">Details</button>
-                        <button class="btn btn-sm btn-primary">Modify</button>
+                        <button class="btn btn-sm btn-outline" @click="viewBookingDetails(booking.id)">Details</button>
+                        <button v-if="booking.status === 'active'" 
+                                class="btn btn-sm btn-primary" 
+                                @click="extendBooking(booking.id)">
+                            Extend
+                        </button>
+                        <button v-if="booking.status === 'active'" 
+                                class="btn btn-sm btn-warning" 
+                                @click="cancelBooking(booking.id)">
+                            Cancel
+                        </button>
                     </div>
                 </div>
             </section>
 
-            <!-- Recent Activity & Notifications -->
+            <!-- Recent Activity -->
             <section class="activity-section">
                 <div class="recent-activity">
                     <h2 class="section-title">Recent Activity</h2>
                     <ul class="activity-list">
-                        <li class="activity-item">
-                            <div class="activity-icon success">
-                                <i class="fas fa-check"></i>
+                        <li v-for="activity in recentActivities" :key="activity.id" class="activity-item">
+                            <div class="activity-icon" :class="activity.type">
+                                <i :class="activity.icon"></i>
                             </div>
                             <div class="activity-content">
-                                <p>Booking completed at Airport Parking</p>
-                                <small>Today, 10:30 AM</small>
+                                <p>{{ activity.message }}</p>
+                                <small>{{ formatDateTime(activity.timestamp) }}</small>
                             </div>
-                            <span class="activity-amount">-$42.00</span>
-                        </li>
-                        <li class="activity-item">
-                            <div class="activity-icon primary">
-                                <i class="fas fa-plus"></i>
-                            </div>
-                            <div class="activity-content">
-                                <p>Added new payment method</p>
-                                <small>Yesterday, 4:15 PM</small>
-                            </div>
-                        </li>
-                        <li class="activity-item">
-                            <div class="activity-icon warning">
-                                <i class="fas fa-exclamation"></i>
-                            </div>
-                            <div class="activity-content">
-                                <p>Received parking reminder</p>
-                                <small>Jun 12, 9:00 AM</small>
-                            </div>
+                            <span v-if="activity.amount !== null && activity.amount !== undefined" class="activity-amount">
+                                {{ formatActivityAmount(activity.amount) }}
+                            </span>
                         </li>
                     </ul>
-                </div>
-                <div class="notifications">
-                    <h2 class="section-title">Notifications</h2>
-                    <div class="notification-card important">
-                        <div class="notification-icon">
-                            <i class="fas fa-bell"></i>
-                        </div>
-                        <div class="notification-content">
-                            <h4>Special Weekend Offer!</h4>
-                            <p>Get 20% off all downtown parking this weekend with code PARK20</p>
-                            <small>Expires in 2 days</small>
-                        </div>
-                    </div>
-                    <div class="notification-card">
-                        <div class="notification-icon">
-                            <i class="fas fa-info-circle"></i>
-                        </div>
-                        <div class="notification-content">
-                            <h4>New Feature Available</h4>
-                            <p>Try our new automated parking extension feature</p>
-                        </div>
-                    </div>
                 </div>
             </section>
         </main>
@@ -183,9 +143,30 @@ export default {
     data() {
         return {
             userData: {},
+            bookings: [],
+            recentActivities: [],
+            currentFilter: 'active', // 'all', 'active', or 'completed'
             isLoading: true,
             error: null
         };
+    },
+    computed: {
+        activeBookingsCount() {
+            return this.bookings.filter(b => b.status === 'active').length;
+        },
+        completedBookingsCount() {
+            return this.bookings.filter(b => b.status === 'completed').length;
+        },
+        filteredBookings() {
+            switch (this.currentFilter) {
+                case 'active':
+                    return this.bookings.filter(b => b.status === 'active');
+                case 'completed':
+                    return this.bookings.filter(b => b.status === 'completed');
+                default:
+                    return this.bookings;
+            }
+        }
     },
     methods: {
         async fetchUserData() {
@@ -193,26 +174,34 @@ export default {
             this.error = null;
             
             try {
-                const response = await fetch('/api/user/home', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        "Authentication-Token": localStorage.getItem('auth_token')  
-                    }
-                });
+                // Fetch user data and bookings in parallel
+                const [userResponse, bookingsResponse] = await Promise.all([
+                    fetch('/api/user/profile', {
+                        headers: {
+                            "Authentication-Token": localStorage.getItem('auth_token')
+                        }
+                    }),
+                    fetch('/api/user/bookings', {
+                        headers: {
+                            "Authentication-Token": localStorage.getItem('auth_token')
+                        }
+                    })
+                ]);
                 
-                if (!response.ok) {
+                if (!userResponse.ok || !bookingsResponse.ok) {
                     throw new Error('Failed to fetch user data');
                 }
                 
-                const data = await response.json();
+                const userData = await userResponse.json();
+                const bookingsData = await bookingsResponse.json();
                 
-                if (!data || Object.keys(data).length === 0) {
-                    this.$router.push('/login');
-                    return;
-                }
+                this.userData = userData;
+                this.bookings = this.processBookings(bookingsData.bookings || []);
+                this.recentActivities = this.processActivities(bookingsData.recent_activities || []);
                 
-                this.userData = data;
+                // Sort bookings by check-in date (newest first)
+                this.bookings.sort((a, b) => new Date(b.check_in) - new Date(a.check_in));
+                
             } catch (err) {
                 console.error('Error fetching user data:', err);
                 this.error = err.message;
@@ -221,9 +210,145 @@ export default {
                 this.isLoading = false;
             }
         },
+        
+        processBookings(bookings) {
+            return bookings.map(booking => ({
+                ...booking,
+                cost: booking.cost || 0,
+                check_in: booking.check_in || new Date().toISOString(),
+                check_out: booking.check_out || null,
+                parking_lot: {
+                    name: booking.parking_lot?.name || 'Unknown Location',
+                    address: booking.parking_lot?.address || 'Address not available',
+                    ...booking.parking_lot
+                }
+            }));
+        },
+        
+        processActivities(activities) {
+            return activities.map(activity => ({
+                ...activity,
+                amount: activity.amount || 0,
+                timestamp: activity.timestamp || new Date().toISOString(),
+                type: activity.type || 'info',
+                icon: activity.icon || 'fa-info-circle'
+            }));
+        },
+        
         formatDate(date) {
             const options = { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' };
             return date.toLocaleDateString('en-US', options);
+        },
+        
+        formatDateTime(dateTime) {
+            const options = { 
+                weekday: 'short', 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            return new Date(dateTime).toLocaleDateString('en-US', options);
+        },
+        
+        calculateDuration(start, end) {
+            if (!start || !end) return 'N/A';
+            
+            const startDate = new Date(start);
+            const endDate = new Date(end);
+            const diffHours = Math.abs(endDate - startDate) / 36e5;
+            
+            if (diffHours < 1) {
+                const minutes = Math.round(diffHours * 60);
+                return `${minutes} min`;
+            } else if (diffHours < 24) {
+                return `${Math.round(diffHours)} hours`;
+            } else {
+                const days = Math.round(diffHours / 24);
+                return `${days} days`;
+            }
+        },
+        
+        formatCurrency(amount) {
+            if (amount === null || amount === undefined) return '$0.00';
+            return `$${parseFloat(amount).toFixed(2)}`;
+        },
+        
+        formatActivityAmount(amount) {
+            if (amount === null || amount === undefined) return '';
+            const sign = amount > 0 ? '+' : '';
+            return `${sign}$${Math.abs(amount).toFixed(2)}`;
+        },
+        
+        showAllBookings() {
+            this.currentFilter = 'all';
+        },
+        
+        showActiveOnly() {
+            this.currentFilter = 'active';
+        },
+        
+        showCompletedOnly() {
+            this.currentFilter = 'completed';
+        },
+        
+        viewBookingDetails(bookingId) {
+            this.$router.push(`/bookings/${bookingId}`);
+        },
+        
+        async extendBooking(bookingId) {
+            try {
+                const response = await fetch(`/api/reservations/${bookingId}/extend`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        "Authentication-Token": localStorage.getItem('auth_token')
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to extend booking');
+                }
+                
+                await this.fetchUserData(); // Refresh data
+            } catch (error) {
+                console.error('Error extending booking:', error);
+                alert('Failed to extend booking');
+            }
+        },
+        
+        async cancelBooking(bookingId) {
+            if (!confirm('Are you sure you want to cancel this booking?')) return;
+            
+            try {
+                const response = await fetch(`/api/reservations/${bookingId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        "Authentication-Token": localStorage.getItem('auth_token')
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to cancel booking');
+                }
+                
+                await this.fetchUserData(); // Refresh data
+            } catch (error) {
+                console.error('Error canceling booking:', error);
+                alert('Failed to cancel booking');
+            }
+        },
+        
+        navigateToNewBooking() {
+            this.$router.push('/bookings/new');
+        },
+        
+        navigateToFindParking() {
+            this.$router.push('/parking');
+        },
+        
+        navigateToPaymentMethods() {
+            this.$router.push('/payment-methods');
         }
     },
     mounted() {

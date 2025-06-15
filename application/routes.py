@@ -1,4 +1,6 @@
 import uuid
+
+from flask_login import logout_user
 from .database import db
 from flask import current_app as app, jsonify, render_template, request
 from flask_security import login_required, auth_required, roles_required, current_user, hash_password, login_user as slogin_user
@@ -74,22 +76,9 @@ def login_user():
             return jsonify({"message": "Invalid password"}), 401
         
 @app.route('/api/logout', methods=['POST'])
-def logout_user():
-    """Logout the current user."""
-    if not current_user.is_authenticated:
-        return jsonify({"message": "User is not logged in"}), 401
-    
-    # Perform logout logic here
-    # For example, you might want to invalidate the user's session or token
-    # In Flask-Security, this is typically handled automatically
-    app.security.logout_user()
-    # Optionally, you can clear the current user
-    current_user = None
-    # Return a success message
-    app.security.datastore.commit()
-    # Clear the session or token if necessary
-    app.security.datastore.clear_session()
-    return jsonify({"message": "User logged out successfully"}), 200
+def logout():
+    logout_user()
+    return jsonify({"message": "Logged out"}), 200
 
 @app.route('/api/user/home', methods=['GET'])
 @auth_required('token')
