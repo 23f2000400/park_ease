@@ -448,6 +448,30 @@ class AdminProfileResource(Resource):
             
         except Exception as e:
             return {'message': str(e)}, 500
+        
+
+class AdminUserProfileResource(Resource):
+    @auth_required('token')
+    @roles_required('admin')
+    def get(self):
+        """Get all users' profiles for admin"""
+        try:
+            users = User.query.all()
+            user_list = []
+            for user in users:
+                user_list.append({
+                    'id': user.id,
+                    'name': user.name,
+                    'email': user.email,
+                    'username': user.username,
+                    'phone': user.phone,
+                    'created_at': user.created_at.isoformat(),
+                    'roles': roles_list(user.roles),
+                    'active': user.active
+                })
+            return jsonify(user_list)
+        except Exception as e:
+            return {'message': str(e)}, 500
 
 # Register resources
 api.add_resource(ParkingLotResource, '/api/lots', '/api/lots/<int:lot_id>')
@@ -456,4 +480,5 @@ api.add_resource(ReservationResource, '/api/reservations', '/api/reservations/<i
 api.add_resource(UserBookingsResource, '/api/user/bookings')
 api.add_resource(UserProfileResource, '/api/user/profile')
 api.add_resource(AdminProfileResource, '/api/admin/profile')
+api.add_resource(AdminUserProfileResource, '/api/admin/users')
 
