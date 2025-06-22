@@ -98,3 +98,21 @@ def get_user_info():
         "roles": [role.name for role in user.roles],  # Return a list of roles
         "active": user.active
     }), 200
+@app.route('/api/admin/home', methods=['GET'])
+@auth_required('token')
+@roles_required('admin')
+def get_admin_info():
+    """Get the current user's information."""
+    if not current_user.is_authenticated:
+        return jsonify({"message": "User is not logged in"}), 401
+    
+    user = current_user
+    return jsonify({
+        "id": user.id,
+        "username": user.username,
+        "name": user.name,
+        "email": user.email,
+        "phone": user.phone,
+        "roles": [role.name for role in user.roles],  # Return a list of roles
+        "active": user.active
+    }), 200

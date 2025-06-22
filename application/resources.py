@@ -6,6 +6,11 @@ from flask_security import auth_required, roles_required, current_user
 from datetime import datetime
 import math
 
+from datetime import datetime, timedelta
+from .models import Reservation, ParkingLot
+import random
+
+
 api = Api()
 
 def roles_list(roles):
@@ -237,12 +242,6 @@ class ReservationResource(Resource):
             db.session.rollback()
             return {'message': str(e)}, 400
         
-from flask_restful import Resource
-from flask import jsonify
-from flask_security import auth_required, current_user
-from datetime import datetime, timedelta
-from .models import Reservation, ParkingLot
-import random
 
 class UserBookingsResource(Resource):
     @auth_required('token')
@@ -428,6 +427,27 @@ class UserProfileResource(Resource):
         
         return favorite[0] if favorite else None
 
+class AdminProfileResource(Resource):
+    @auth_required('token')
+    @roles_required('admin')
+    def get(self):
+        """Get admin profile details"""
+        try:
+            # Get the current admin's details
+            user_data = {
+                'id': current_user.id,
+                'name': current_user.name,
+                'email': current_user.email,
+                'username': current_user.username,
+                'phone': current_user.phone,
+                'created_at': current_user.created_at.isoformat(),
+                'roles': roles_list(current_user.roles)
+            }
+            
+            return jsonify(user_data)
+            
+        except Exception as e:
+            return {'message': str(e)}, 500
 
 # Register resources
 api.add_resource(ParkingLotResource, '/api/lots', '/api/lots/<int:lot_id>')
@@ -435,4 +455,5 @@ api.add_resource(ParkingSpotResource, '/api/lots/<int:lot_id>/spots')
 api.add_resource(ReservationResource, '/api/reservations', '/api/reservations/<int:reservation_id>')
 api.add_resource(UserBookingsResource, '/api/user/bookings')
 api.add_resource(UserProfileResource, '/api/user/profile')
+api.add_resource(AdminProfileResource, '/api/admin/profile')
 
