@@ -19,74 +19,116 @@ def roles_list(roles):
 class ParkingLotResource(Resource):
     # Common parser for request data
     parser = reqparse.RequestParser()
+    parser.add_argument('id', type=int, required=False, help='Parking lot ID is optional for updates')
     parser.add_argument('name', type=str, required=True, help='Parking lot name is required')
+    parser.add_argument('area', type=str, required=True, help='Parking lot area is required')
     parser.add_argument('address', type=str, required=True)
     parser.add_argument('pincode', type=str, required=True)
     parser.add_argument('price', type=float, required=True)
     parser.add_argument('total_spots', type=int, required=True)
+    parser.add_argument('status', type=str, choices=['A', 'O'], default='A', help='Status must be A (Available) or O (Occupied)')
+    parser.add_argument('spot_number', type=int, required=False, help='Spot number is optional for updates')
 
     @auth_required('token')
     @roles_required('admin')
     def post(self):
-        """Create a new parking lot"""
-        args = self.parser.parse_args()
-        
         try:
+            args = self.parser.parse_args()
+
+            # Create a new ParkingLot instance
             new_lot = ParkingLot(
                 name=args['name'],
+                area=args['area'],
                 address=args['address'],
                 pincode=args['pincode'],
                 price=args['price'],
                 total_spots=args['total_spots']
             )
-            
+
             db.session.add(new_lot)
             db.session.commit()
-            
-            # Create the parking spots
-            new_lot.create_spots()
-            
+
+            # Optional: auto-generate spots if your model supports it
+            if hasattr(new_lot, 'create_spots'):
+                new_lot.create_spots()
+
             return {
                 'message': 'Parking lot created successfully',
-                'lot_id': new_lot.id
+                'lot': {
+                    'id': new_lot.id,
+                    'name': new_lot.name,
+                    'area': new_lot.area,
+                    'address': new_lot.address,
+                    'pincode': new_lot.pincode,
+                    'price': float(new_lot.price),
+                    'total_spots': new_lot.total_spots,
+                    'available_spots': new_lot.total_spots  # assuming all spots are initially available
+                }
             }, 201
-            
-        except Exception as e:
-            db.session.rollback()
-            return {'message': str(e)}, 400
 
-    @auth_required('token')
-    def get(self, lot_id=None):
-        """Get parking lot(s)"""
-        if lot_id:
-            lot = ParkingLot.query.get(lot_id)
-            if not lot:
-                return {'message': 'Parking lot not found'}, 404
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            db.session.rollback()
+            return {'error': str(e)}, 400
+
+
+    # @auth_required('token')
+    # def get(self, lot_id=None):
+    #     """Get parking lot(s)"""
+    #     if lot_id:
+    #         lot = ParkingLot.query.get(lot_id)
+    #         if not lot:
+    #             return {'message': 'Parking lot not found'}, 404
                 
-            return jsonify({
-                'id': lot.id,
-                'name': lot.name,
-                'address': lot.address,
-                'pincode': lot.pincode,
-                'price': lot.price,
-                'total_spots': lot.total_spots,
-                'available_spots': lot.spots.filter_by(status='A').count(),
-                'created_at': lot.created_at.isoformat()
-            })
-        else:
+    #         return jsonify({
+    #             'id': lot.id,
+    #             'name': lot.name,
+    #             'area': lot.area,
+    #             'address': lot.address,
+    #             'pincode': lot.pincode,
+    #             'price': lot.price,
+    #             'total_spots': lot.total_spots,
+    #             'available_spots': lot.spots.filter_by(status='A').count(),
+    #         })
+    #     else:
             # Get all parking lots with availability info
+
+            # lots = []
+            # result = []
+            # if 'admin' in roles_list(current_user.roles):
+            #     # Admin can see all lots
+            #     lots = ParkingLot.query.all()
+            # else:
+            #     lots = current_user.parking_lots  # User can see their own lots
+    
+    def get(self):
+        try:
             lots = ParkingLot.query.all()
             result = []
             for lot in lots:
-                result.append({
+                this_lot = {
                     'id': lot.id,
                     'name': lot.name,
+                    'area': lot.area,
                     'address': lot.address,
-                    'price': lot.price,
-                    'available_spots': lot.spots.filter_by(status='A').count(),
-                    'total_spots': lot.total_spots
-                })
-            return jsonify(result)
+                    'pincode': lot.pincode,
+                    'price': float(lot.price), 
+                    'total_spots': lot.total_spots,
+                    'available_spots': lot.spots.filter_by(status='A').count() if hasattr(lot, 'spots') else 0
+                }
+                result.append(this_lot)
+
+            if result:
+                return result, 200
+            else:
+                return {'message': 'No parking lots found'}, 404
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return {'error': str(e)}, 500
+
+
 
     @auth_required('token')
     @roles_required('admin')
