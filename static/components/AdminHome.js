@@ -120,36 +120,55 @@ export default {
             </button>
           </div>
           
-          <table class="table table-hover">
-  <thead class="table-light">
-    <tr>
-      <th>ID</th>
-      <th>Name</th>
-      <th>Address</th>
-      <th>Price</th>
-      <th>Available</th>
-      <th>Total</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr v-if="parkingLots.length === 0">
-      <td colspan="7" class="text-center text-muted py-4">No parking lots found</td>
-    </tr>
-    <tr v-for="lot in parkingLots" :key="lot.id">
-      <td>{{ lot.id }}</td>
-      <td>{{ lot.name }}</td>
-      <td>{{ lot.address }}</td>
-      <td>{{ lot.price }}</td>
-      <td>{{ lot.available_spots }}</td>
-      <td>{{ lot.total_spots }}</td>
-      <td>
-        <button class="btn btn-sm btn-outline-primary" @click="viewLot(lot.id)">View</button>
-      </td>
-    </tr>
-  </tbody>
-</table>
+<div class="py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">Parking Lots</h2>
+  </div>
 
+  <div class="row">
+    <div v-for="lot in parkingLots" :key="lot.id" class="col-md-4 mb-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <h5 class="card-title mb-0">{{ lot.name }}</h5>
+            <div>
+              <a href="#" @click.prevent="editLot(lot)" class="text-primary me-2">Edit</a>
+              <a href="#" @click.prevent="deleteLot(lot.id)" class="text-danger">Delete</a>
+            </div>
+          </div>
+          <p class="text-success mb-2">
+            (Occupied: {{ lot.total_spots - lot.available_spots }}/{{ lot.total_spots }})
+          </p>
+
+          <!-- Parking spot grid -->
+          <div class="d-flex flex-wrap gap-2">
+            <button
+              v-for="n in lot.total_spots"
+                :key="'spot-' + lot.id + '-' + n"
+
+              class="spot-box btn btn-sm fw-bold d-flex align-items-center justify-content-center"
+              :class="isSpotOccupied(lot, n) ? 'btn-danger' : 'btn-success'"
+              style="width: 30px; height: 30px; padding: 0;"
+              @click="handleSpotClick(lot, n)"
+            >
+              {{ isSpotOccupied(lot, n) ? 'O' : 'A' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Lot Button Card -->
+    <div class="col-md-4 mb-4">
+      <div class="card h-100 border-primary text-center" style="cursor: pointer;" @click="showAddForm = true">
+        <div class="card-body d-flex flex-column justify-content-center align-items-center">
+          <i class="fas fa-plus fa-2x text-primary mb-2"></i>
+          <strong class="text-primary">Add Lot</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
         </div>
 
         <!-- Add Parking Lot Form (conditionally shown) -->
@@ -350,7 +369,27 @@ export default {
                 console.error('Error fetching parking lots:', error);
                 this.error = error.message;
               }
-            }
+            },
+              isSpotOccupied(lot, spotNumber) {
+    return lot.spots?.some(s => s.spot_number === spotNumber && s.status === 'O');
+  },
+  handleSpotClick(lot, spotNumber) {
+    const spot = lot.spots?.find(s => s.spot_number === spotNumber);
+    if (spot && spot.status === 'O') {
+      alert(`Occupied by: ${spot.vehicle_number || 'N/A'}`);
+      // You can also show a modal here instead of alert
+    }
+  },
+  editLot(lot) {
+    // Redirect or open edit modal
+    this.$router.push(`/admin/parking-lot/${lot.id}`);
+  },
+  deleteLot(lotId) {
+    if (confirm('Are you sure you want to delete this lot?')) {
+      // Add delete logic here
+      console.log(`Delete lot ${lotId}`);
+    }
+  }
 
 
     },
