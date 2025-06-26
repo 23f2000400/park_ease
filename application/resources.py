@@ -108,6 +108,7 @@ class ParkingLotResource(Resource):
             result = []
             for lot in lots:
                 spots = [{
+                'id': s.id,
                 'spot_number': s.spot_number,
                 'status': s.status
                 } for s in lot.spots]

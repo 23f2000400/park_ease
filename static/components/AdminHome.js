@@ -217,6 +217,47 @@ export default {
 
             </div>
           </div>
+            <!-- Spot Details Modal -->
+            <div v-if="showSpotOModal" class="modal-overlay" 
+                style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                        background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;">
+              <div class="modal-content" 
+                  style="background: white; padding: 20px; border-radius: 8px; width: 400px; max-width: 95%; box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);">
+                
+                <h5 class="mb-3 text-center bg-warning py-2 rounded">Occupied Parking Spot Details</h5>
+                
+                <p><strong>ID:</strong> {{ selectedSpot?.id || 'N/A' }}</p>
+                <p><strong>Status:</strong> Occupied </p>
+                <p><strong>Spot number:</strong> {{ selectedSpot?.spotNumber || 'N/A' }}</p>
+                <p><strong>Customer ID:</strong> {{ selectedSpot?.customerId || 'N/A' }}</p>
+                <p><strong>Vehicle number:</strong> {{ selectedSpot?.vehicleNumber || 'N/A' }}</p>
+                <p><strong>Date/time of parking:</strong> {{ formatDate(selectedSpot?.checkIn) }}</p>
+                <p><strong>Est. parking cost:</strong> ₹{{ selectedSpot?.cost || 'N/A' }}</p>
+
+                <div class="text-end">
+                  <button class="btn btn-primary mt-3" @click="showSpotOModal = false">Close</button>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="showSpotAModal" class="modal-overlay" 
+                style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                        background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;">
+              <div class="modal-content" 
+                  style="background: white; padding: 20px; border-radius: 8px; width: 400px; max-width: 95%; box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);">
+                
+                <h5 class="mb-3 text-center bg-warning py-2 rounded">Available Parking Spot Details</h5>
+                
+                <p><strong>ID:</strong> {{ selectedSpot?.id || 'N/A' }}</p>
+                <p><strong>Status:</strong> Available </p>
+                <p><strong>Spot number:</strong> {{ selectedSpot?.spotNumber || 'N/A' }}</p>
+
+
+                <div class="text-end">
+                  <button class="btn btn-primary mt-3" @click="showSpotAModal = false">Close</button>
+                </div>
+              </div>
+            </div>
 
       </div>
     </div>
@@ -235,7 +276,11 @@ export default {
             usersLoading: false,
             parkingLots: [],
             showAddForm: false,
-            selectedLotId: null, // <--- track if editing
+            selectedLotId: null,
+            selectedSpot: null,
+            showSpotOModal: false,
+            showSpotAModal: false,
+
 
             newLot: {
                 name: '',
@@ -395,9 +440,27 @@ export default {
         handleSpotClick(lot, spotNumber) {
           const spot = lot.spots?.find(s => s.spot_number === spotNumber);
           if (spot && spot.status === 'O') {
-            alert(`Occupied by: ${spot.vehicle_number || 'N/A'}`);
-            // You can also show a modal here instead of alert
+            this.selectedSpot = {
+              id: spot.id,
+              status: spot.status,
+              spotNumber: spot.spot_number,
+              customerId: spot.reservation?.user_id,
+              vehicleNumber: spot.reservation?.vehicle_number,
+              checkIn: spot.reservation?.check_in,
+              cost: spot.reservation?.cost
+            };
+            this.showSpotOModal = true;
+          } else if (spot && spot.status === 'A') {
+            this.selectedSpot = {
+              id: spot.id,
+              status: spot.status,
+              spotNumber: spot.spot_number,
+            };
+            this.showSpotAModal = true;
           }
+            
+
+
   },
   editLot(lot) {
     // Redirect or open edit modal
@@ -444,7 +507,13 @@ export default {
             total_spots: null
           };
           this.showAddForm = false;
-        }
+        },
+        formatDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            const d = new Date(dateStr);
+            return d.toLocaleString(); // Or format it as you like
+          }
+
       
 
 
