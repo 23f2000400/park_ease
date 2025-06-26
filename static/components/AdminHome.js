@@ -48,7 +48,7 @@ export default {
               <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                   <div>
-                    <h5 class="card-title">Parking Spots</h5>
+                    <h5 class="card-title">Parking Spots - {{parkingLots.length}} </h5>
                   </div>
                   <i class="fas fa-parking fa-3x"></i>
                 </div>
@@ -120,10 +120,6 @@ export default {
             </button>
           </div>
                   
-        <div class="py-4">
-          <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="mb-0">Parking Lots</h2>
-          </div>
 
           <div class="row">
             <div v-for="lot in parkingLots" :key="lot.id" class="col-md-4 mb-4">
@@ -178,40 +174,50 @@ export default {
         </div>
 
         <!-- Add Parking Lot Form (conditionally shown) -->
-        <div class="card mt-4" v-if="showAddForm">
-          <div class="card-body">
-            <h5 class="card-title">Add New Parking Lot</h5>
-            <form @submit.prevent="createOrUpdateParkingLot">
-              <div class="row mb-3">
-                <div class="col-md-6">
+          <!-- Add Parking Lot Modal -->
+          <div v-if="showAddForm" class="modal-overlay" 
+              style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                      background: rgba(0, 0, 0, 0.5); display: flex; 
+                      justify-content: center; align-items: center; z-index: 999;">
+            
+            <div class="modal-content" 
+                style="background: white; padding: 20px; border-radius: 8px; width: 500px; 
+                        max-width: 95%; box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);">
+
+              <h5 class="mb-3">{{ selectedLotId ? 'Edit Parking Lot' : 'Add New Parking Lot' }}</h5>
+              
+              <form @submit.prevent="createOrUpdateParkingLot">
+                <div class="mb-3">
                   <input v-model="newLot.name" class="form-control" placeholder="Name" required />
                 </div>
-                <div class="col-md-6">
+                <div class="mb-3">
                   <input v-model="newLot.area" class="form-control" placeholder="Area" required />
                 </div>
-              </div>
-              <div class="mb-3">
-                <input v-model="newLot.address" class="form-control" placeholder="Address" required />
-              </div>
-              <div class="row mb-3">
-                <div class="col-md-4">
-                  <input v-model="newLot.pincode" class="form-control" placeholder="Pincode" required />
+                <div class="mb-3">
+                  <input v-model="newLot.address" class="form-control" placeholder="Address" required />
                 </div>
-                <div class="col-md-4">
-                  <input type="number" v-model.number="newLot.price" class="form-control" placeholder="Price" required />
+                <div class="row">
+                  <div class="col-md-4 mb-3">
+                    <input v-model="newLot.pincode" class="form-control" placeholder="Pincode" required />
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <input type="number" v-model.number="newLot.price" class="form-control" placeholder="Price" required />
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <input type="number" v-model.number="newLot.total_spots" class="form-control" placeholder="Total Spots" required />
+                  </div>
                 </div>
-                <div class="col-md-4">
-                  <input type="number" v-model.number="newLot.total_spots" class="form-control" placeholder="Total Spots" required />
+                <div class="d-flex justify-content-end mt-3">
+                  <button type="button" class="btn btn-secondary me-2" @click="resetForm">Cancel</button>
+                  <button type="submit" class="btn btn-primary">
+                    {{ selectedLotId ? 'Update Parking Lot' : 'Create Parking Lot' }}
+                  </button>
                 </div>
-              </div>
-              <h5 class="card-title">{{ selectedLotId ? 'Edit Parking Lot' : 'Add New Parking Lot' }}</h5>
-              <button type="submit" class="btn btn-primary">
-                {{ selectedLotId ? 'Update Parking Lot' : 'Create Parking Lot' }}
-              </button>              
-            </form><button type="button" class="btn btn-secondary ms-2" @click="resetForm">Cancel</button>
+              </form>
 
+            </div>
           </div>
-        </div>
+
       </div>
     </div>
     `,
@@ -428,17 +434,17 @@ export default {
         }
       },
         resetForm() {
-    this.selectedLotId = null;
-    this.newLot = {
-      name: '',
-      area: '',
-      address: '',
-      pincode: '',
-      price: null,
-      total_spots: null
-    };
-    this.showAddForm = false;
-  }
+          this.selectedLotId = null;
+          this.newLot = {
+            name: '',
+            area: '',
+            address: '',
+            pincode: '',
+            price: null,
+            total_spots: null
+          };
+          this.showAddForm = false;
+        }
       
 
 
