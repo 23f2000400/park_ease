@@ -105,7 +105,7 @@ export default {
                 </div>
               </td>
             </tr>
-            <tr v-else-if="users.length === 0">
+            <tr v-else-if="users.length ==0">
               <td colspan="7" class="text-center text-muted py-4">No users found</td>
             </tr>
           </tbody>
@@ -121,37 +121,35 @@ export default {
           </div>
           
           <table class="table table-hover">
-            <thead class="table-light">
-              <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Address</th>
-                <th>Price</th>
-                <th>Available</th>
-                <th>Total</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="!parkingLots">
-                <td colspan="7" class="text-center text-muted py-4">Loading...</td>
-              </tr>
-              <tr v-for="lot in parkingLots" :key="lot.id">
-                <td>{{ lot.id }}</td>
-                <td>{{ lot.name }}</td>
-                <td>{{ lot.address }}</td>
-                <td>{{ lot.price }}</td>
-                <td>{{ lot.available_spots }}</td>
-                <td>{{ lot.total_spots }}</td>
-                <td>
-                  <button class="btn btn-sm btn-outline-primary" @click="viewLot(lot.id)">View</button>
-                </td>
-              </tr>
-              <tr v-if="parkingLots && parkingLots.length === 0">
-                <td colspan="7" class="text-center text-muted py-4">No parking lots found</td>
-              </tr>
-            </tbody>
-          </table>
+  <thead class="table-light">
+    <tr>
+      <th>ID</th>
+      <th>Name</th>
+      <th>Address</th>
+      <th>Price</th>
+      <th>Available</th>
+      <th>Total</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr v-if="parkingLots.length === 0">
+      <td colspan="7" class="text-center text-muted py-4">No parking lots found</td>
+    </tr>
+    <tr v-for="lot in parkingLots" :key="lot.id">
+      <td>{{ lot.id }}</td>
+      <td>{{ lot.name }}</td>
+      <td>{{ lot.address }}</td>
+      <td>{{ lot.price }}</td>
+      <td>{{ lot.available_spots }}</td>
+      <td>{{ lot.total_spots }}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-primary" @click="viewLot(lot.id)">View</button>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
         </div>
 
         <!-- Add Parking Lot Form (conditionally shown) -->
@@ -201,7 +199,7 @@ export default {
             error: null,
             users: [],
             usersLoading: false,
-            parkingLots: null,
+            parkingLots: [],
             showAddForm: false,
             newLot: {
                 name: '',
@@ -327,23 +325,34 @@ export default {
                 alert('Error: ' + error.message);
             }
         },
-        async fetchParkingLots() {
-            try {
+            async fetchParkingLots() {
+              try {
                 const response = await fetch('/api/lots', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authentication-Token': localStorage.getItem('auth_token')
-                    },
-                    credentials: 'include'
+                  method: 'GET',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authentication-Token': localStorage.getItem('auth_token')
+                  },
+                  credentials: 'include'
                 });
+
                 const data = await response.json();
-                this.parkingLots = data;
-            } catch (error) {
+                console.log("Fetched parking lots:", data);
+
+                // Check if response is an array
+                if (Array.isArray(data)) {
+                  this.parkingLots = data.filter(lot => lot && lot.id);
+                } else {
+                  this.parkingLots = [];  // No lots found or unexpected structure
+                }
+
+              } catch (error) {
                 console.error('Error fetching parking lots:', error);
                 this.error = error.message;
+              }
             }
-        }
+
+
     },
     mounted() {
         this.fetchParkingLots();

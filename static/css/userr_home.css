@@ -331,3 +331,26 @@
         justify-content: flex-end;
     }
 }
+.spot-box {
+  width: 30px;
+  height: 30px;
+  color: white;
+  border-radius: 5px;
+  text-align: center;
+  line-height: 30px;
+  font-weight: bold;
+  font-size: 0.8rem;
+  cursor: default;
+}
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
