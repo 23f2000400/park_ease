@@ -18,9 +18,7 @@ class ReservationStatus(Enum):
     CANCELLED = 'cancelled'
 
 class User(UserMixin, db.Model):
-    """User model for both admin and regular users"""
     __tablename__ = 'user'
-    
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     username = db.Column(db.String(50), unique=True, nullable=False)
@@ -29,9 +27,9 @@ class User(UserMixin, db.Model):
     phone = db.Column(db.String(20), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    reservations = db.relationship('Reservation', backref='reserved_by', lazy='dynamic')
     fs_uniquifier = db.Column(db.String(64), unique=True, nullable=False, default=lambda: str(uuid.uuid4()))
     active = db.Column(db.Boolean, default=True)
+    reservations = db.relationship('Reservation', backref='reserved_by', lazy='dynamic')
     roles = db.relationship('Role', secondary='user_roles', backref=db.backref('users', lazy='dynamic'))
 
     def __repr__(self):
@@ -61,9 +59,8 @@ class UserRoles(db.Model):
 
 
 class ParkingLot(db.Model):
-    """Parking lot model"""
     __tablename__ = 'parking_lot'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     area = db.Column(db.String(100), nullable=False)
@@ -74,11 +71,18 @@ class ParkingLot(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # One-to-many relationship to ParkingSpot
     spots = db.relationship('ParkingSpot', backref='lot', lazy='dynamic', cascade='all, delete-orphan')
 
     def __repr__(self):
         return f'<ParkingLot {self.name}>'
+
+    def create_spots(self):
+        """Create parking spots for this lot based on total_spots"""
+        from .database import db
+        for n in range(1, self.total_spots + 1):
+            spot = ParkingSpot(lot_id=self.id, spot_number=n, status='A')
+            db.session.add(spot)
+        db.session.commit()
 
 
 

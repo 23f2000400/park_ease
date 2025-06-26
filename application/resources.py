@@ -107,6 +107,10 @@ class ParkingLotResource(Resource):
             lots = ParkingLot.query.all()
             result = []
             for lot in lots:
+                spots = [{
+                'spot_number': s.spot_number,
+                'status': s.status
+                } for s in lot.spots]
                 this_lot = {
                     'id': lot.id,
                     'name': lot.name,
@@ -115,7 +119,9 @@ class ParkingLotResource(Resource):
                     'pincode': lot.pincode,
                     'price': float(lot.price), 
                     'total_spots': lot.total_spots,
-                    'available_spots': lot.spots.filter_by(status='A').count() if hasattr(lot, 'spots') else 0
+                    'available_spots': lot.spots.filter_by(status='A').count() if hasattr(lot, 'spots') else 0,
+                    'occupied_spots': lot.spots.filter_by(status='O').count() if hasattr(lot, 'spots') else 0,
+                    'spots': spots
                 }
                 result.append(this_lot)
 

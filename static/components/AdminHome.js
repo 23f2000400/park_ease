@@ -119,44 +119,50 @@ export default {
               <i class="fas fa-plus me-2"></i>Add Parking Lot
             </button>
           </div>
-          
-<div class="py-4">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="mb-0">Parking Lots</h2>
-  </div>
+                  
+        <div class="py-4">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="mb-0">Parking Lots</h2>
+          </div>
 
-  <div class="row">
-    <div v-for="lot in parkingLots" :key="lot.id" class="col-md-4 mb-4">
-      <div class="card shadow-sm h-100">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start mb-2">
-            <h5 class="card-title mb-0">{{ lot.name }}</h5>
-            <div>
-              <a href="#" @click.prevent="editLot(lot)" class="text-primary me-2">Edit</a>
-              <a href="#" @click.prevent="deleteLot(lot.id)" class="text-danger">Delete</a>
+          <div class="row">
+            <div v-for="lot in parkingLots" :key="lot.id" class="col-md-4 mb-4">
+              <div class="card shadow-sm h-100">
+                <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h5 class="card-title mb-0">{{ lot.name }}</h5>
+                    <div>
+                      <a href="#" @click.prevent="editLot(lot)" class="text-primary me-2">Edit</a>
+                      <a href="#" @click.prevent="deleteLot(lot.id)" class="text-danger">Delete</a>
+                    </div>
+                  </div>
+                  <p class="text-success mb-2">
+                    (Occupied: {{ lot.total_spots - lot.available_spots }}/{{ lot.total_spots }})
+                  </p>
+                  <p class="card-text mb-2">
+                    <strong>Area:</strong> {{ lot.area }}<br />
+                    <strong>Address:</strong> {{ lot.address }}<br />
+                    <strong>Pincode:</strong> {{ lot.pincode }}<br />
+                    <strong>Price:</strong> ₹{{ lot.price }} per hour
+                  </p>
+
+                  <!-- Parking spot grid -->
+                  <div class="d-flex flex-wrap gap-2">
+                    <button
+                      v-for="n in lot.total_spots"
+                        :key="'spot-' + lot.id + '-' + n"
+
+                      class="spot-box btn btn-sm fw-bold d-flex align-items-center justify-content-center"
+                      :class="isSpotOccupied(lot, n) ? 'btn-danger' : 'btn-success'"
+                      style="width: 30px; height: 30px; padding: 0;"
+                      @click="handleSpotClick(lot, n)"
+                    >
+                      {{ isSpotOccupied(lot, n) ? 'O' : 'A' }}
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-          <p class="text-success mb-2">
-            (Occupied: {{ lot.total_spots - lot.available_spots }}/{{ lot.total_spots }})
-          </p>
-
-          <!-- Parking spot grid -->
-          <div class="d-flex flex-wrap gap-2">
-            <button
-              v-for="n in lot.total_spots"
-                :key="'spot-' + lot.id + '-' + n"
-
-              class="spot-box btn btn-sm fw-bold d-flex align-items-center justify-content-center"
-              :class="isSpotOccupied(lot, n) ? 'btn-danger' : 'btn-success'"
-              style="width: 30px; height: 30px; padding: 0;"
-              @click="handleSpotClick(lot, n)"
-            >
-              {{ isSpotOccupied(lot, n) ? 'O' : 'A' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- Add Lot Button Card -->
     <div class="col-md-4 mb-4">
