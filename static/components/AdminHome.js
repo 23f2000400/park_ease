@@ -145,15 +145,14 @@ export default {
                   <!-- Parking spot grid -->
                   <div class="d-flex flex-wrap gap-2">
                     <button
-                      v-for="n in lot.total_spots"
-                        :key="'spot-' + lot.id + '-' + n"
-
+                      v-for="spot in lot.spots"
+                      :key="'spot-' + spot.id"
                       class="spot-box btn btn-sm fw-bold d-flex align-items-center justify-content-center"
-                      :class="isSpotOccupied(lot, n) ? 'btn-danger' : 'btn-success'"
+                      :class="spot.status === 'O' ? 'btn-danger' : 'btn-success'"
                       style="width: 30px; height: 30px; padding: 0;"
-                      @click="handleSpotClick(lot, n)"
+                      @click="handleSpotClickDirect(spot)"
                     >
-                      {{ isSpotOccupied(lot, n) ? 'O' : 'A' }}
+                      {{ spot.status === 'O' ? 'O' : 'A' }}
                     </button>
                   </div>
                 </div>
@@ -235,6 +234,7 @@ export default {
                 <p><strong>Est. parking cost:</strong> ₹{{ selectedSpot?.cost || 'N/A' }}</p>
 
                 <div class="text-end">
+                  <button class="btn btn-danger me-2" @click="deleteSpot">Delete Spot</button>
                   <button class="btn btn-primary mt-3" @click="showSpotOModal = false">Close</button>
                 </div>
               </div>
@@ -254,6 +254,7 @@ export default {
 
 
                 <div class="text-end">
+                  <button class="btn btn-danger me-2" @click="deleteSpot">Delete Spot</button>
                   <button class="btn btn-primary mt-3" @click="showSpotAModal = false">Close</button>
                 </div>
               </div>
@@ -437,37 +438,33 @@ export default {
           return lot.spots?.some(s => s.spot_number === spotNumber && s.status === 'O');
         },
               
-        handleSpotClick(lot, spotNumber) {
-          const spot = lot.spots?.find(s => s.spot_number === spotNumber);
-          if (spot && spot.status === 'O') {
-            this.selectedSpot = {
-              id: spot.id,
-              status: spot.status,
-              spotNumber: spot.spot_number,
-              customerId: spot.reservation?.user_id,
-              vehicleNumber: spot.reservation?.vehicle_number,
-              checkIn: spot.reservation?.check_in,
-              cost: spot.reservation?.cost
-            };
-            this.showSpotOModal = true;
-          } else if (spot && spot.status === 'A') {
-            this.selectedSpot = {
-              id: spot.id,
-              status: spot.status,
-              spotNumber: spot.spot_number,
-            };
-            this.showSpotAModal = true;
-          }
-            
+        handleSpotClickDirect(spot) {
+            if (spot.status === 'O') {
+              this.selectedSpot = {
+                id: spot.id,
+                status: spot.status,
+                spotNumber: spot.spot_number,
+                customerId: spot.reservation?.user_id,
+                vehicleNumber: spot.reservation?.vehicle_number,
+                checkIn: spot.reservation?.check_in,
+                cost: spot.reservation?.cost
+              };
+              this.showSpotOModal = true;
+            } else {
+              this.selectedSpot = {
+                id: spot.id,
+                status: spot.status,
+                spotNumber: spot.spot_number,
+              };
+              this.showSpotAModal = true;
+            }
+          },
 
-
-  },
-  editLot(lot) {
-    // Redirect or open edit modal
-        this.newLot = { ...lot }; // pre-fill form
-        this.selectedLotId = lot.id;
-        this.showAddForm = true;
-            
+      editLot(lot) {
+        // Redirect or open edit modal
+            this.newLot = { ...lot }; // pre-fill form
+            this.selectedLotId = lot.id;
+            this.showAddForm = true;           
       },
 
       async deleteLot(lotId) {
@@ -512,6 +509,41 @@ export default {
             if (!dateStr) return 'N/A';
             const d = new Date(dateStr);
             return d.toLocaleString(); // Or format it as you like
+        },
+
+        async deleteSpot() {
+            if (!this.selectedSpot || this.selectedSpot.status === 'O') {
+              alert("Occupied spots cannot be deleted.");
+              return;
+            }
+
+            if (!confirm("Are you sure you want to delete this available spot?")) return;
+
+            try {
+              const token = localStorage.getItem('auth_token');
+              const response = await fetch(`/api/spots/${this.selectedSpot.id}`, {
+                method: 'DELETE',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authentication-Token': token
+                },
+                credentials: 'include'
+              });
+
+              const data = await response.json().catch(() => {
+                throw new Error('Server did not return valid JSON');
+              });
+
+              if (!response.ok) throw new Error(data.message || 'Deletion failed');
+
+              alert(data.message);
+              this.showSpotAModal = false;
+              this.fetchParkingLots(); // Refresh parking data
+
+            } catch (error) {
+              console.error('Delete spot error:', error);
+              alert('Error: ' + error.message);
+            }
           }
 
       

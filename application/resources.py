@@ -197,18 +197,34 @@ class ParkingLotResource(Resource):
 
 
 class ParkingSpotResource(Resource):
+    
     @auth_required('token')
-    def get(self, lot_id):
-        """Get all spots for a parking lot"""
-        spots = ParkingSpot.query.filter_by(lot_id=lot_id).all()
-        return jsonify([{
-            'id': spot.id,
-            'spot_number': spot.spot_number,
-            'status': spot.status,
-            'reserved': spot.reservation is not None if hasattr(spot, 'reservation') else False
-        } for spot in spots])
+    @roles_required('admin')
+    def delete(self, spot_id):
+        from .models import ParkingSpot, ParkingLot
+        spot = ParkingSpot.query.get(spot_id)
+        if not spot:
+            return {'message': 'Spot not found'}, 404
 
+        if spot.status == 'O':
+            return {'message': 'Occupied spot cannot be deleted'}, 400
 
+        try:
+            lot = ParkingLot.query.get(spot.lot_id)
+            db.session.delete(spot)
+            db.session.commit()
+
+            # Update the total_spots to reflect actual spot count
+            actual_spots = ParkingSpot.query.filter_by(lot_id=lot.id).count()
+            lot.total_spots = actual_spots
+            db.session.commit()
+
+            return {'message': 'Spot deleted successfully'}, 200
+
+        except Exception as e:
+            db.session.rollback()
+            return {'message': f'Failed to delete spot: {str(e)}'}, 500
+        
 class ReservationResource(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('spot_id', type=int, required=True)
@@ -525,7 +541,7 @@ class AdminUserProfileResource(Resource):
 
 # Register resources
 api.add_resource(ParkingLotResource, '/api/lots', '/api/lots/<int:lot_id>')
-api.add_resource(ParkingSpotResource, '/api/lots/<int:lot_id>/spots')
+api.add_resource(ParkingSpotResource, '/api/spots/<int:spot_id>')
 api.add_resource(ReservationResource, '/api/reservations', '/api/reservations/<int:reservation_id>')
 api.add_resource(UserBookingsResource, '/api/user/bookings')
 api.add_resource(UserProfileResource, '/api/user/profile')
