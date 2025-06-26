@@ -181,7 +181,7 @@ export default {
         <div class="card mt-4" v-if="showAddForm">
           <div class="card-body">
             <h5 class="card-title">Add New Parking Lot</h5>
-            <form @submit.prevent="createParkingLot">
+            <form @submit.prevent="createOrUpdateParkingLot">
               <div class="row mb-3">
                 <div class="col-md-6">
                   <input v-model="newLot.name" class="form-control" placeholder="Name" required />
@@ -204,9 +204,12 @@ export default {
                   <input type="number" v-model.number="newLot.total_spots" class="form-control" placeholder="Total Spots" required />
                 </div>
               </div>
-              <button type="submit" class="btn btn-primary">Create Parking Lot</button>
-              <button type="button" class="btn btn-secondary ms-2" @click="showAddForm = false">Cancel</button>
-            </form>
+              <h5 class="card-title">{{ selectedLotId ? 'Edit Parking Lot' : 'Add New Parking Lot' }}</h5>
+              <button type="submit" class="btn btn-primary">
+                {{ selectedLotId ? 'Update Parking Lot' : 'Create Parking Lot' }}
+              </button>              
+            </form><button type="button" class="btn btn-secondary ms-2" @click="resetForm">Cancel</button>
+
           </div>
         </div>
       </div>
@@ -226,6 +229,8 @@ export default {
             usersLoading: false,
             parkingLots: [],
             showAddForm: false,
+            selectedLotId: null, // <--- track if editing
+
             newLot: {
                 name: '',
                 area: '',
@@ -306,100 +311,143 @@ export default {
         viewLot(lotId) {
             this.$router.push(`/admin/parking-lot/${lotId}`);
         },
-        async createParkingLot() {
+        async createOrUpdateParkingLot() {
             try {
-                const token = localStorage.getItem('auth_token');
-                const response = await fetch('/api/lots', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authentication-Token': token
-                    },
-                    credentials: 'include',
-                    body: JSON.stringify(this.newLot)
-                });
+              const token = localStorage.getItem('auth_token');
+              const method = this.selectedLotId ? 'PUT' : 'POST';
+              const url = this.selectedLotId ? `/api/lots/${this.selectedLotId}` : '/api/lots';
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || 'Failed to create parking lot');
-                }
+              const response = await fetch(url, {
+                method,
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authentication-Token': token
+                },
+                credentials: 'include',
+                body: JSON.stringify(this.newLot)
+              });
 
-                const result = await response.json();
+              if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to save parking lot');
+              }
 
-                // Success message (optional)
-                alert('Parking lot created successfully!');
+              alert(this.selectedLotId ? 'Parking lot updated successfully' : 'Parking lot created successfully');
 
-                // Reset form
-                this.newLot = {
-                    name: '',
-                    area: '',
-                    address: '',
-                    pincode: '',
-                    price: null,
-                    total_spots: null
-                };
+              // Reset form
+              this.newLot = {
+                name: '',
+                area: '',
+                address: '',
+                pincode: '',
+                price: null,
+                total_spots: null
+              };
+              this.selectedLotId = null;
+              this.showAddForm = false;
 
-                // Hide the form
-                this.showAddForm = false;
-
-                // Refresh parking lots
-                this.fetchParkingLots();
+              // Reload lots
+              this.fetchParkingLots();
 
             } catch (error) {
-                console.error('Create error:', error);
-                alert('Error: ' + error.message);
+              console.error('Save error:', error);
+              alert('Error: ' + error.message);
             }
+          },
+
+        async fetchParkingLots() {
+          try {
+            const response = await fetch('/api/lots', {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authentication-Token': localStorage.getItem('auth_token')
+              },
+              credentials: 'include'
+            });
+
+            const data = await response.json();
+            console.log("Fetched parking lots:", data);
+
+            // Check if response is an array
+            if (Array.isArray(data)) {
+              this.parkingLots = data.filter(lot => lot && lot.id);
+            } else {
+              this.parkingLots = [];  // No lots found or unexpected structure
+            }
+
+          } catch (error) {
+            console.error('Error fetching parking lots:', error);
+            this.error = error.message;
+          }
         },
-            async fetchParkingLots() {
-              try {
-                const response = await fetch('/api/lots', {
-                  method: 'GET',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authentication-Token': localStorage.getItem('auth_token')
-                  },
-                  credentials: 'include'
-                });
 
-                const data = await response.json();
-                console.log("Fetched parking lots:", data);
-
-                // Check if response is an array
-                if (Array.isArray(data)) {
-                  this.parkingLots = data.filter(lot => lot && lot.id);
-                } else {
-                  this.parkingLots = [];  // No lots found or unexpected structure
-                }
-
-              } catch (error) {
-                console.error('Error fetching parking lots:', error);
-                this.error = error.message;
-              }
-            },
-              isSpotOccupied(lot, spotNumber) {
-    return lot.spots?.some(s => s.spot_number === spotNumber && s.status === 'O');
-  },
-  handleSpotClick(lot, spotNumber) {
-    const spot = lot.spots?.find(s => s.spot_number === spotNumber);
-    if (spot && spot.status === 'O') {
-      alert(`Occupied by: ${spot.vehicle_number || 'N/A'}`);
-      // You can also show a modal here instead of alert
-    }
+        isSpotOccupied(lot, spotNumber) {
+          return lot.spots?.some(s => s.spot_number === spotNumber && s.status === 'O');
+        },
+              
+        handleSpotClick(lot, spotNumber) {
+          const spot = lot.spots?.find(s => s.spot_number === spotNumber);
+          if (spot && spot.status === 'O') {
+            alert(`Occupied by: ${spot.vehicle_number || 'N/A'}`);
+            // You can also show a modal here instead of alert
+          }
   },
   editLot(lot) {
     // Redirect or open edit modal
-    this.$router.push(`/admin/parking-lot/${lot.id}`);
-  },
-  deleteLot(lotId) {
-    if (confirm('Are you sure you want to delete this lot?')) {
-      // Add delete logic here
-      console.log(`Delete lot ${lotId}`);
-    }
+        this.newLot = { ...lot }; // pre-fill form
+        this.selectedLotId = lot.id;
+        this.showAddForm = true;
+            
+      },
+
+      async deleteLot(lotId) {
+        if (!confirm('Are you sure you want to delete this parking lot?')) return;
+
+        try {
+          const token = localStorage.getItem('auth_token');
+          const response = await fetch(`/api/lots/${lotId}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authentication-Token': token
+            },
+            credentials: 'include'
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to delete parking lot');
+          }
+
+          alert('Parking lot deleted successfully.');
+          this.fetchParkingLots();
+        } catch (error) {
+          console.error('Delete error:', error);
+          alert('Error: ' + error.message);
+        }
+      },
+        resetForm() {
+    this.selectedLotId = null;
+    this.newLot = {
+      name: '',
+      area: '',
+      address: '',
+      pincode: '',
+      price: null,
+      total_spots: null
+    };
+    this.showAddForm = false;
   }
+      
+
 
 
     },
     mounted() {
         this.fetchParkingLots();
-    }
+
+    },
+   
+
 }

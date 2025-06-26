@@ -156,6 +156,7 @@ class ParkingLotResource(Resource):
                     }, 400
             
             lot.name = args['name']
+            lot.area = args['area']
             lot.address = args['address']
             lot.pincode = args['pincode']
             lot.price = args['price']

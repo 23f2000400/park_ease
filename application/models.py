@@ -83,6 +83,39 @@ class ParkingLot(db.Model):
             spot = ParkingSpot(lot_id=self.id, spot_number=n, status='A')
             db.session.add(spot)
         db.session.commit()
+    
+    def update_spots(self, new_total):
+        """Safely update parking spot count — without deleting occupied spots"""
+        from .database import db
+        current_total = self.total_spots
+
+        if new_total < current_total:
+            # Ensure no occupied spot lies beyond the new total
+            occupied = ParkingSpot.query.filter(
+                ParkingSpot.lot_id == self.id,
+                ParkingSpot.spot_number > new_total,
+                ParkingSpot.status == 'O'
+            ).count()
+
+            if occupied > 0:
+                raise Exception("Cannot reduce total_spots — some spots beyond that are occupied.")
+
+            # Delete only unoccupied spots beyond the new total
+            excess_spots = ParkingSpot.query.filter(
+                ParkingSpot.lot_id == self.id,
+                ParkingSpot.spot_number > new_total,
+                ParkingSpot.status != 'O'
+            ).all()
+            for spot in excess_spots:
+                db.session.delete(spot)
+
+        elif new_total > current_total:
+            for n in range(current_total + 1, new_total + 1):
+                spot = ParkingSpot(lot_id=self.id, spot_number=n, status='A')
+                db.session.add(spot)
+
+        self.total_spots = new_total
+        db.session.commit()
 
 
 
