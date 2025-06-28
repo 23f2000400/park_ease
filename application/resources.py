@@ -304,7 +304,7 @@ class ReservationResource(Resource):
             return {'message': 'Unauthorized'}, 403
             
         if reservation.status != 'active':
-            return {'message': 'Reservation is not active'}, 400
+            return {'message': f'Reservation is not active (current = {reservation.status})'}, 400
             
         try:
             reservation.check_out = datetime.utcnow()
@@ -312,18 +312,20 @@ class ReservationResource(Resource):
             # Calculate final cost based on time spent
             if not reservation.cost:
                 hours = (reservation.check_out - reservation.check_in).total_seconds() / 3600
-                reservation.cost = math.ceil(hours) * reservation.parking_spot.parking_lot.price
+                reservation.cost = math.ceil(hours) * reservation.spot.lot.price
+
+
             
             reservation.status = 'completed'
-            reservation.parking_spot.status = 'A'
+            reservation.spot.status = 'A'
             
             db.session.commit()
             
             return {
                 'message': 'Checked out successfully',
-                'final_cost': reservation.cost,
+                'final_cost': float(reservation.cost),
                 'total_hours': round((reservation.check_out - reservation.check_in).total_seconds() / 3600, 2)
-            }
+            },200
             
         except Exception as e:
             db.session.rollback()
