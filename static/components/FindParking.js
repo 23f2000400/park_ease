@@ -1,29 +1,24 @@
 export default {
-template: `
-  <div> <!-- Root wrapper required -->
-
-    <!-- Search Section -->
-    <div class="find-parking-container container py-5">
-      <!-- City Dropdown -->
+  template: `
+    <div class="container py-5">
+      <!-- City Selection -->
       <div class="row justify-content-center mb-5">
         <div class="col-md-6">
           <div class="card shadow-sm">
             <div class="card-body p-4">
               <h3 class="text-center mb-4">Find Parking</h3>
               <form @submit.prevent="findParking">
-                <div class="mb-3">
-                  <label for="city" class="form-label">Select City</label>
-                  <select
-                    id="city"
-                    class="form-select"
-                    v-model="selectedCity"
-                    @change="findParking"
-                    required
-                  >
-                    <option disabled value="">-- Choose a City --</option>
-                    <option v-for="city in cities" :key="city" :value="city">{{ city }}</option>
-                  </select>
-                </div>
+                <label for="city" class="form-label">Select City</label>
+                <select
+                  id="city"
+                  class="form-select"
+                  v-model="selectedCity"
+                  @change="findParking"
+                  required
+                >
+                  <option disabled value="">-- Choose a City --</option>
+                  <option v-for="city in cities" :key="city" :value="city">{{ city }}</option>
+                </select>
               </form>
             </div>
           </div>
@@ -38,13 +33,13 @@ template: `
             <div class="card shadow border-0 h-100">
               <div class="card-body">
                 <h5 class="card-title text-primary fw-bold">{{ lot.name }}</h5>
-                <p class="card-text text-muted small">
+                <p class="card-text small text-muted">
                   <strong>Available:</strong> {{ lot.available_spots }}<br/>
                   <strong>Occupied:</strong> {{ lot.total_spots - lot.available_spots }}/{{ lot.total_spots }}<br/>
                   <strong>Area:</strong> {{ lot.area }}<br/>
                   <strong>Address:</strong> {{ lot.address }}<br/>
                   <strong>Pincode:</strong> {{ lot.pincode }}<br/>
-                  <strong>Price:</strong> ₹{{ lot.price }} / hour
+                  <strong>Price:</strong> ₹{{ lot.price }}/hour
                 </p>
                 <div class="d-flex flex-wrap gap-1">
                   <button
@@ -63,151 +58,157 @@ template: `
         </div>
       </div>
 
-      <!-- No Results -->
-      <div v-else-if="selectedCity" class="text-center mt-4">
-        <p class="text-muted">No parking lots found in <strong>{{ selectedCity }}</strong>.</p>
+      <!-- Booking Modal -->
+      <div v-if="showBookingModal" class="modal-overlay d-flex justify-content-center align-items-center" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1050;">
+        <div class="bg-white p-4 rounded shadow" style="width: 450px;">
+          <h5 class="text-center text-primary mb-3">Book the Parking Spot</h5>
+
+          <div class="mb-3">
+            <label class="form-label">Mode</label><br>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" id="bookNow" value="now" v-model="bookingForm.mode">
+              <label class="form-check-label" for="bookNow">Book Now</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" id="schedule" value="schedule" v-model="bookingForm.mode">
+              <label class="form-check-label" for="schedule">Schedule</label>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="vehicleNumber" class="form-label">Vehicle Number</label>
+            <input id="vehicleNumber" v-model="bookingForm.vehicleNumber" class="form-control" required />
+          </div>
+
+          <div class="mb-3">
+            <div v-if="bookingForm.mode === 'schedule'">
+              <label for="checkInTime" class="form-label">Check-in</label>
+              <input type="datetime-local" id="checkInTime" v-model="bookingForm.scheduledCheckIn" class="form-control" />
+            </div>
+
+            <label for="checkOutTime" class="form-label mt-2">Check-out</label>
+            <input type="datetime-local" id="checkOutTime" v-model="bookingForm.scheduledCheckOut" class="form-control" />
+
+            <div v-if="validTimes" class="mt-3">
+              <div><strong>Estimated Duration:</strong> {{ estimatedHours }} hours</div>
+              <div><strong>Estimated Cost:</strong> ₹{{ estimatedCost }}</div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end">
+            <button class="btn btn-outline-secondary me-2" @click="showBookingModal = false">Cancel</button>
+            <button class="btn btn-primary" @click="proceedToPayment">Pay & Book</button>
+          </div>
+        </div>
       </div>
     </div>
-
-    <!-- Booking Modal -->
-    <div
-      v-if="showBookingModal"
-      class="modal-overlay d-flex justify-content-center align-items-center"
-      style="position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.5); z-index: 1050;"
-    >
-      <div class="bg-white p-4 rounded shadow" style="width: 400px;">
-        <h5 class="text-center text-primary mb-3">Book the Parking Spot</h5>
-
-        <div class="mb-2"><strong>Spot ID:</strong> {{ bookingSpot.spotId }}</div>
-        <div class="mb-2"><strong>Lot ID:</strong> {{ bookingSpot.lotId }}</div>
-        <div class="mb-2"><strong>User ID:</strong> {{ bookingSpot.userId }}</div>
-
-        <div class="mb-3">
-          <label for="vehicleNumber" class="form-label">Vehicle Number</label>
-          <input
-            id="vehicleNumber"
-            v-model="bookingForm.vehicleNumber"
-            class="form-control"
-            placeholder="Enter vehicle number"
-            required
-          />
-        </div>
-
-        <div class="d-flex justify-content-end">
-          <button class="btn btn-outline-secondary me-2" @click="showBookingModal = false">Cancel</button>
-          <button class="btn btn-primary" @click="submitBooking">Reserve</button>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-
   `,
 
-data() {
-  return {
-    cities: [],
-    selectedCity: '',
-    parkingLots: [],
-    showBookingModal: false,
-    bookingSpot: null, // holds spot, lot, etc.
-    bookingForm: {
-      vehicleNumber: ''
-    },
-    currentUserId: null // to be fetched
-  };
-},
-
-
-  methods: {
-    async fetchCities() {
-      try {
-        const response = await fetch('/api/cities');
-        const data = await response.json();
-        this.cities = data;
-      } catch (error) {
-        console.error('Failed to load cities:', error);
-      }
-    },
-
-    async findParking() {
-      if (!this.selectedCity) {
-        this.parkingLots = [];
-        return;
-      }
-
-      try {
-        const response = await fetch(`/api/lots?city=${encodeURIComponent(this.selectedCity)}`);
-        const data = await response.json();
-        this.parkingLots = Array.isArray(data) ? data : [];
-      } catch (error) {
-        console.error('Error loading parking lots:', error);
-        this.parkingLots = [];
-      }
-    },
-      handleSpotClick(spot, lot) {
-    if (spot.status !== 'A') return;
-
-    this.bookingSpot = {
-      spotId: spot.id,
-      lotId: lot.id,
-      userId: this.currentUserId,
-      lotName: lot.name
+  data() {
+    return {
+      cities: [],
+      selectedCity: '',
+      parkingLots: [],
+      showBookingModal: false,
+      bookingSpot: null,
+      bookingForm: {
+        vehicleNumber: '',
+        mode: 'now',
+        scheduledCheckIn: '',
+        scheduledCheckOut: ''
+      },
+      currentUserId: null
     };
-    this.bookingForm.vehicleNumber = '';
-    this.showBookingModal = true;
   },
 
-  async submitBooking() {
-    try {
-      const payload = {
-        spot_id: this.bookingSpot.spotId,
-        vehicle_number: this.bookingForm.vehicleNumber
-      };
-
-      const response = await fetch('/api/reservations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authentication-Token': localStorage.getItem('auth_token')
-        },
-        credentials: 'include',
-        body: JSON.stringify(payload)
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Reservation failed');
-
-      alert('Booking successful!');
-      this.showBookingModal = false;
-      this.findParking(); // refresh spot status
-
-    } catch (err) {
-      alert('Error: ' + err.message);
+  computed: {
+    checkInTime() {
+      return this.bookingForm.mode === 'now' ? new Date().toISOString() : this.bookingForm.scheduledCheckIn;
+    },
+    validTimes() {
+      return this.bookingForm.scheduledCheckOut && new Date(this.checkInTime) < new Date(this.bookingForm.scheduledCheckOut);
+    },
+    estimatedHours() {
+      if (!this.validTimes) return 0;
+      const diff = (new Date(this.bookingForm.scheduledCheckOut) - new Date(this.checkInTime)) / (1000 * 60 * 60);
+      return Math.max(0, Math.ceil(diff));
+    },
+    estimatedCost() {
+      const lot = this.parkingLots.find(l => l.id === this.bookingSpot?.lotId);
+      return Math.ceil(this.estimatedHours * (lot?.price || 0));
     }
   },
 
-  async fetchUserId() {
-    try {
+  methods: {
+    async fetchCities() {
+      const response = await fetch('/api/cities');
+      this.cities = await response.json();
+    },
+
+    async findParking() {
+      if (!this.selectedCity) return (this.parkingLots = []);
+      const response = await fetch(`/api/lots?city=${encodeURIComponent(this.selectedCity)}`);
+      this.parkingLots = await response.json();
+    },
+
+    handleSpotClick(spot, lot) {
+      if (spot.status !== 'A') return;
+      this.bookingSpot = {
+        spotId: spot.id,
+        lotId: lot.id,
+        lotName: lot.name
+      };
+      this.bookingForm.vehicleNumber = '';
+      this.bookingForm.mode = 'now';
+      this.bookingForm.scheduledCheckIn = '';
+      this.bookingForm.scheduledCheckOut = '';
+      this.showBookingModal = true;
+    },
+
+    proceedToPayment() {
+      if (!this.bookingForm.vehicleNumber || !this.bookingForm.scheduledCheckOut) {
+        return alert('Please complete all fields.');
+      }
+      if (this.bookingForm.mode === 'schedule' && !this.bookingForm.scheduledCheckIn) {
+        return alert('Please select check-in time.');
+      }
+      if (new Date(this.checkInTime) >= new Date(this.bookingForm.scheduledCheckOut)) {
+        return alert('Check-out must be after check-in.');
+      }
+
+      const lot = this.parkingLots.find(l => l.id === this.bookingSpot.lotId);
+
+      this.$router.push({
+        path: '/payment',
+        query: {
+          spot_id: this.bookingSpot.spotId,
+          vehicle_number: this.bookingForm.vehicleNumber,
+          check_in: this.checkInTime,
+          check_out: this.bookingForm.scheduledCheckOut,
+          cost: this.estimatedCost,
+          lot_name: this.bookingSpot.lotName,
+          area: lot?.area || '',
+          address: lot?.address || '',
+          pincode: lot?.pincode || '',
+          city: this.selectedCity
+        }
+      });
+    },
+
+    async fetchUserId() {
       const res = await fetch('/api/user/profile', {
         headers: {
-          'Content-Type': 'application/json',
           'Authentication-Token': localStorage.getItem('auth_token')
         },
         credentials: 'include'
       });
       const data = await res.json();
       this.currentUserId = data.id;
-    } catch (e) {
-      console.error('User fetch failed');
     }
-  }
-},
+  },
 
-mounted() {
-  this.fetchCities();
-  this.fetchUserId();
-}
-}
+  mounted() {
+    this.fetchCities();
+    this.fetchUserId();
+  }
+};

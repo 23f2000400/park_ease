@@ -7,6 +7,7 @@ import UserHome from './components/UserHome.js';
 import AdminHome from './components/AdminHome.js';
 import AdminProfile from './components/AdminProfile.js';
 import FindParking from './components/FindParking.js';
+import Payment from './components/Payment.js';
 
 
 const routes = [
@@ -17,6 +18,7 @@ const routes = [
     {path: '/admin/home', component: AdminHome, meta: { requiresAuth: true, requiresAdmin: true } },
     {path: '/admin/profile', component: AdminProfile, meta: { requiresAuth: true, requiresAdmin: true } },
     {path: '/find-parking', component: FindParking, meta: { requiresAuth: true } },
+    {path: '/payment', component: Payment, meta: { requiresAuth: true } },
 ]
 
 const router = new VueRouter({

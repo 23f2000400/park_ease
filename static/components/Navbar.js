@@ -12,6 +12,9 @@ export default {
                         <router-link class="nav-link" to="/">Home</router-link>
                     </li>
                     <li class="nav-item px-3">
+                        <router-link class="nav-link" to="/user/home">User Home</router-link>
+                    </li>
+                    <li class="nav-item px-3">
                         <router-link class="nav-link" to="/login">Login</router-link>
                     </li>
                     <li class="nav-item px-3">

@@ -249,7 +249,9 @@ class ReservationResource(Resource):
     parser.add_argument('spot_id', type=int, required=True)
     parser.add_argument('vehicle_number', type=str, required=True, help='Vehicle number is required')
     parser.add_argument('hours', type=int, required=False)
-    
+    parser.add_argument('check_in', type=str, required=False)
+    parser.add_argument('check_out', type=str, required=False)
+
     @auth_required('token')
     @roles_required('user')
     def post(self):
@@ -267,13 +269,22 @@ class ReservationResource(Resource):
             # Calculate cost if hours are provided (for pre-booking)
             cost = None
             if args.get('hours'):
-                cost = spot.parking_lot.price * args['hours']
+                cost = spot.lot.price * args['hours']
             
+            check_in_time = datetime.utcnow()
+            if args.get('check_in'):
+                try:
+                    check_in_time = datetime.fromisoformat(args['check_in'].replace('Z', '+00:00'))
+                except Exception:
+                    return {'message': 'Invalid check_in format. Use ISO format.'}, 400
+
             reservation = Reservation(
                 user_id=current_user.id,
                 spot_id=spot.id,
                 vehicle_number=args['vehicle_number'],
-                cost=cost
+                cost=cost,
+                check_in=check_in_time,
+                check_out=None  # Initially no check-out time
             )
             
             spot.status = 'O'
@@ -285,7 +296,7 @@ class ReservationResource(Resource):
                 'message': 'Reservation created successfully',
                 'reservation_id': reservation.id,
                 'check_in': reservation.check_in.isoformat(),
-                'estimated_cost': cost
+                'estimated_cost': float(cost)
             }, 201
             
         except Exception as e:
