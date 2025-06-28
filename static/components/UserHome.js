@@ -344,7 +344,7 @@ export default {
         },
         
         navigateToFindParking() {
-            this.$router.push('/parking');
+            this.$router.push('/find-parking');
         },
         
         navigateToPaymentMethods() {

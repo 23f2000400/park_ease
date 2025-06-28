@@ -21,6 +21,7 @@ class ParkingLotResource(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('id', type=int, required=False, help='Parking lot ID is optional for updates')
     parser.add_argument('name', type=str, required=True, help='Parking lot name is required')
+    parser.add_argument('city', type=str, required=True, help='City is required')
     parser.add_argument('area', type=str, required=True, help='Parking lot area is required')
     parser.add_argument('address', type=str, required=True)
     parser.add_argument('pincode', type=str, required=True)
@@ -38,6 +39,7 @@ class ParkingLotResource(Resource):
             # Create a new ParkingLot instance
             new_lot = ParkingLot(
                 name=args['name'],
+                city=args['city'],
                 area=args['area'],
                 address=args['address'],
                 pincode=args['pincode'],
@@ -57,6 +59,7 @@ class ParkingLotResource(Resource):
                 'lot': {
                     'id': new_lot.id,
                     'name': new_lot.name,
+                    'city': new_lot.city,
                     'area': new_lot.area,
                     'address': new_lot.address,
                     'pincode': new_lot.pincode,
@@ -101,20 +104,27 @@ class ParkingLotResource(Resource):
             #     lots = ParkingLot.query.all()
             # else:
             #     lots = current_user.parking_lots  # User can see their own lots
-    
     def get(self):
         try:
-            lots = ParkingLot.query.all()
+            city = request.args.get('city')
+            query = ParkingLot.query
+
+            if city:
+                query = query.filter_by(city=city)
+
+            lots = query.all()
             result = []
             for lot in lots:
                 spots = [{
-                'id': s.id,
-                'spot_number': s.spot_number,
-                'status': s.status
+                    'id': s.id,
+                    'spot_number': s.spot_number,
+                    'status': s.status
                 } for s in lot.spots]
+
                 this_lot = {
                     'id': lot.id,
                     'name': lot.name,
+                    'city': lot.city,
                     'area': lot.area,
                     'address': lot.address,
                     'pincode': lot.pincode,
@@ -194,6 +204,15 @@ class ParkingLotResource(Resource):
         except Exception as e:
             db.session.rollback()
             return {'message': str(e)}, 400
+        
+class CityListResource(Resource):
+    def get(self):
+        try:
+            cities = db.session.query(ParkingLot.city).distinct().all()
+            city_list = [c[0] for c in cities]
+            return jsonify(city_list)
+        except Exception as e:
+            return {'message': str(e)}, 500
 
 
 class ParkingSpotResource(Resource):
@@ -228,8 +247,9 @@ class ParkingSpotResource(Resource):
 class ReservationResource(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('spot_id', type=int, required=True)
+    parser.add_argument('vehicle_number', type=str, required=True, help='Vehicle number is required')
     parser.add_argument('hours', type=int, required=False)
-
+    
     @auth_required('token')
     @roles_required('user')
     def post(self):
@@ -252,6 +272,7 @@ class ReservationResource(Resource):
             reservation = Reservation(
                 user_id=current_user.id,
                 spot_id=spot.id,
+                vehicle_number=args['vehicle_number'],
                 cost=cost
             )
             
@@ -542,6 +563,7 @@ class AdminUserProfileResource(Resource):
 # Register resources
 api.add_resource(ParkingLotResource, '/api/lots', '/api/lots/<int:lot_id>')
 api.add_resource(ParkingSpotResource, '/api/spots/<int:spot_id>')
+api.add_resource(CityListResource, '/api/cities')
 api.add_resource(ReservationResource, '/api/reservations', '/api/reservations/<int:reservation_id>')
 api.add_resource(UserBookingsResource, '/api/user/bookings')
 api.add_resource(UserProfileResource, '/api/user/profile')

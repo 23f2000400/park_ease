@@ -116,7 +116,7 @@ export default {
           <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="mb-0">Parking Lots</h2>
             <button class="btn btn-primary" @click="showAddForm = !showAddForm">
-              <i class="fas fa-plus me-2"></i>Add Parking Lot
+              <i class="fas fa-plus me-2"></i>+ Add Parking Lot
             </button>
           </div>
                   
@@ -136,6 +136,8 @@ export default {
                     (Occupied: {{ lot.total_spots - lot.available_spots }}/{{ lot.total_spots }})
                   </p>
                   <p class="card-text mb-2">
+                    <strong>State:</strong> {{ lot.state }}<br />
+                    <strong>City:</strong> {{ lot.city }}<br />
                     <strong>Area:</strong> {{ lot.area }}<br />
                     <strong>Address:</strong> {{ lot.address }}<br />
                     <strong>Pincode:</strong> {{ lot.pincode }}<br />
@@ -164,7 +166,7 @@ export default {
       <div class="card h-100 border-primary text-center" style="cursor: pointer;" @click="showAddForm = true">
         <div class="card-body d-flex flex-column justify-content-center align-items-center">
           <i class="fas fa-plus fa-2x text-primary mb-2"></i>
-          <strong class="text-primary">Add Lot</strong>
+          <strong class="text-primary">+ Add Lot</strong>
         </div>
       </div>
     </div>
@@ -184,81 +186,129 @@ export default {
                         max-width: 95%; box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);">
 
               <h5 class="mb-3">{{ selectedLotId ? 'Edit Parking Lot' : 'Add New Parking Lot' }}</h5>
-              
-              <form @submit.prevent="createOrUpdateParkingLot">
-                <div class="mb-3">
-                  <input v-model="newLot.name" class="form-control" placeholder="Name" required />
-                </div>
-                <div class="mb-3">
-                  <input v-model="newLot.area" class="form-control" placeholder="Area" required />
-                </div>
-                <div class="mb-3">
-                  <input v-model="newLot.address" class="form-control" placeholder="Address" required />
-                </div>
-                <div class="row">
-                  <div class="col-md-4 mb-3">
-                    <input v-model="newLot.pincode" class="form-control" placeholder="Pincode" required />
+                <form @submit.prevent="createOrUpdateParkingLot" class="p-4 border rounded shadow-sm bg-light">
+                  <h4 class="mb-4 text-primary fw-bold">
+                    {{ selectedLotId ? 'Edit Parking Lot' : 'Add New Parking Lot' }}
+                  </h4>
+
+                  <!-- Name -->
+                  <div class="mb-3">
+                    <label for="name" class="form-label">Parking Lot Name</label>
+                    <input v-model="newLot.name" id="name" class="form-control shadow-sm" placeholder="e.g., Skyline Plaza Lot" required />
                   </div>
-                  <div class="col-md-4 mb-3">
-                    <input type="number" v-model.number="newLot.price" class="form-control" placeholder="Price" required />
+
+                  <!-- City and Area -->
+                  <div class="row">
+                    <div class="col-md-6 mb-3">
+                      <label for="city" class="form-label">City</label>
+                      <select id="city" v-model="newLot.city" class="form-select shadow-sm" :disabled="selectedLotId" required>
+                        <option value="" disabled>Select City</option>
+                        <option v-for="city in cities" :key="city" :value="city">{{ city }}</option>
+                      </select>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                      <label for="area" class="form-label">Area</label>
+                      <input v-model="newLot.area" id="area" class="form-control shadow-sm" placeholder="e.g., Sector 5" required />
+                    </div>
                   </div>
-                  <div class="col-md-4 mb-3">
-                    <input type="number" v-model.number="newLot.total_spots" class="form-control" placeholder="Total Spots" required />
+
+                  <!-- Address -->
+                  <div class="mb-3">
+                    <label for="address" class="form-label">Address</label>
+                    <input v-model="newLot.address" id="address" class="form-control shadow-sm" placeholder="Street, Landmark, etc." required />
                   </div>
-                </div>
-                <div class="d-flex justify-content-end mt-3">
-                  <button type="button" class="btn btn-secondary me-2" @click="resetForm">Cancel</button>
-                  <button type="submit" class="btn btn-primary">
-                    {{ selectedLotId ? 'Update Parking Lot' : 'Create Parking Lot' }}
-                  </button>
-                </div>
-              </form>
+
+                  <!-- Pincode, Price, and Total Spots -->
+                  <div class="row">
+                    <div class="col-md-4 mb-3">
+                      <label for="pincode" class="form-label">Pincode</label>
+                      <input v-model="newLot.pincode" id="pincode" class="form-control shadow-sm" placeholder="e.g., 400001" required />
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                      <label for="price" class="form-label">Hourly Price (₹)</label>
+                      <input type="number" v-model.number="newLot.price" id="price" class="form-control shadow-sm" min="0" placeholder="₹" required />
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                      <label for="total_spots" class="form-label">Total Spots</label>
+                      <input type="number" v-model.number="newLot.total_spots" id="total_spots" class="form-control shadow-sm" min="1" required />
+                    </div>
+                  </div>
+
+                  <!-- Action Buttons -->
+                  <div class="d-flex justify-content-end mt-4">
+                    <button type="button" class="btn btn-outline-secondary me-3" @click="resetForm">
+                      <i class="fas fa-times me-1"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary px-4">
+                      <i class="fas fa-save me-1"></i>{{ selectedLotId ? 'Update' : 'Create' }}
+                    </button>
+                  </div>
+                </form>
+
 
             </div>
           </div>
             <!-- Spot Details Modal -->
-            <div v-if="showSpotOModal" class="modal-overlay" 
-                style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-                        background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;">
-              <div class="modal-content" 
-                  style="background: white; padding: 20px; border-radius: 8px; width: 400px; max-width: 95%; box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);">
-                
-                <h5 class="mb-3 text-center bg-warning py-2 rounded">Occupied Parking Spot Details</h5>
-                
-                <p><strong>ID:</strong> {{ selectedSpot?.id || 'N/A' }}</p>
-                <p><strong>Status:</strong> Occupied </p>
-                <p><strong>Spot number:</strong> {{ selectedSpot?.spotNumber || 'N/A' }}</p>
-                <p><strong>Customer ID:</strong> {{ selectedSpot?.customerId || 'N/A' }}</p>
-                <p><strong>Vehicle number:</strong> {{ selectedSpot?.vehicleNumber || 'N/A' }}</p>
-                <p><strong>Date/time of parking:</strong> {{ formatDate(selectedSpot?.checkIn) }}</p>
-                <p><strong>Est. parking cost:</strong> ₹{{ selectedSpot?.cost || 'N/A' }}</p>
+          <!-- Occupied Spot Modal -->
+          <div v-if="showSpotOModal" class="modal-overlay"
+              style="position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                      background: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1050;">
+            <div class="bg-white rounded shadow-lg p-4" style="width: 450px; max-width: 95%;">
+              <div class="text-center mb-3">
+                <h5 class="text-danger fw-bold"><i class="fas fa-car-crash me-2"></i>Occupied Spot Details</h5>
+                <hr />
+              </div>
 
-                <div class="text-end">
-                  <button class="btn btn-danger me-2" @click="deleteSpot">Delete Spot</button>
-                  <button class="btn btn-primary mt-3" @click="showSpotOModal = false">Close</button>
-                </div>
+              <ul class="list-group list-group-flush mb-3">
+                <li class="list-group-item"><strong>ID:</strong> {{ selectedSpot?.id || 'N/A' }}</li>
+                <li class="list-group-item"><strong>Status:</strong> <span class="text-danger">Occupied</span></li>
+                <li class="list-group-item"><strong>Spot No. :</strong> {{ selectedSpot?.spotNumber || 'N/A' }}</li>
+                <li class="list-group-item"><strong>Customer ID:</strong> {{ selectedSpot?.customerId || 'N/A' }}</li>
+                <li class="list-group-item"><strong>Vehicle No:</strong> {{ selectedSpot?.vehicleNumber || 'N/A' }}</li>
+                <li class="list-group-item"><strong>Check-in Time:</strong> {{ formatDate(selectedSpot?.checkIn) }}</li>
+                <li class="list-group-item"><strong>Estimated Cost:</strong> ₹{{ selectedSpot?.cost || 'N/A' }}</li>
+              </ul>
+
+              <div class="d-flex justify-content-end">
+                <button class="btn btn-secondary me-2" @click="showSpotOModal = false">
+                  <i class="fas fa-times me-1"></i> Close
+                </button>
+                <button class="btn btn-danger" @click="deleteSpot">
+                  <i class="fas fa-trash-alt me-1"></i> Delete Spot
+                </button>
               </div>
             </div>
+          </div>
 
-            <div v-if="showSpotAModal" class="modal-overlay" 
-                style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-                        background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;">
-              <div class="modal-content" 
-                  style="background: white; padding: 20px; border-radius: 8px; width: 400px; max-width: 95%; box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);">
-                
-                <h5 class="mb-3 text-center bg-warning py-2 rounded">Available Parking Spot Details</h5>
-                
-                <p><strong>ID:</strong> {{ selectedSpot?.id || 'N/A' }}</p>
-                <p><strong>Status:</strong> Available </p>
-                <p><strong>Spot number:</strong> {{ selectedSpot?.spotNumber || 'N/A' }}</p>
+              <!-- Available Spot Modal -->
+              <div v-if="showSpotAModal" class="modal-overlay"
+                  style="position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                          background: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1050;">
+                <div class="bg-white rounded shadow-lg p-4" style="width: 450px; max-width: 95%;">
+                  <div class="text-center mb-3">
+                    <h5 class="text-success fw-bold"><i class="fas fa-parking me-2"></i>Available Spot Details</h5>
+                    <hr />
+                  </div>
 
+                  <ul class="list-group list-group-flush mb-3">
+                    <li class="list-group-item"><strong>ID:</strong> {{ selectedSpot?.id || 'N/A' }}</li>
+                    <li class="list-group-item"><strong>Status:</strong> <span class="text-success">Available</span></li>
+                    <li class="list-group-item"><strong>Spot No. :</strong> {{ selectedSpot?.spotNumber || 'N/A' }}</li>
+                  </ul>
 
-                <div class="text-end">
-                  <button class="btn btn-danger me-2" @click="deleteSpot">Delete Spot</button>
-                  <button class="btn btn-primary mt-3" @click="showSpotAModal = false">Close</button>
+                  <div class="d-flex justify-content-end">
+                    <button class="btn btn-secondary me-2" @click="showSpotAModal = false">
+                      <i class="fas fa-times me-1"></i> Close
+                    </button>
+                    <button class="btn btn-danger" @click="deleteSpot">
+                      <i class="fas fa-trash me-1"></i> Delete Spot
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
 
       </div>
     </div>
@@ -285,12 +335,18 @@ export default {
 
             newLot: {
                 name: '',
+                city: '',
                 area: '',
                 address: '',
                 pincode: '',
                 price: null,
                 total_spots: null
             },
+
+            cities: [
+                'Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Ahmedabad', 'Chennai', 'Kolkata', 
+                //  more cities as needed
+            ]
         };
     },
     created() {
@@ -389,6 +445,7 @@ export default {
               // Reset form
               this.newLot = {
                 name: '',
+                city: '',
                 area: '',
                 address: '',
                 pincode: '',
@@ -497,6 +554,7 @@ export default {
           this.selectedLotId = null;
           this.newLot = {
             name: '',
+            city: '',
             area: '',
             address: '',
             pincode: '',
