@@ -60,7 +60,7 @@ export default {
               <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                   <div>
-                    <h5 class="card-title">Active Bookings</h5>
+                    <h5 class="card-title">Active Bookings -{{ active_reservations.length }}</h5>
                   </div>
                   <i class="fas fa-calendar-check fa-3x"></i>
                 </div>
@@ -267,8 +267,10 @@ export default {
                 <li class="list-group-item"><strong>Status:</strong> <span class="text-danger">Occupied</span></li>
                 <li class="list-group-item"><strong>Spot No. :</strong> {{ selectedSpot?.spotNumber || 'N/A' }}</li>
                 <li class="list-group-item"><strong>Customer ID:</strong> {{ selectedSpot?.customerId || 'N/A' }}</li>
+                <li class="list-group-item"><strong>Customer Name:</strong> {{ selectedSpot?.userName || 'N/A' }}</li>
                 <li class="list-group-item"><strong>Vehicle No:</strong> {{ selectedSpot?.vehicleNumber || 'N/A' }}</li>
                 <li class="list-group-item"><strong>Check-in Time:</strong> {{ formatDate(selectedSpot?.checkIn) }}</li>
+                <li class="list-group-item"><strong>Check-out Time:</strong> {{ formatDate(selectedSpot?.checkOut) || 'N/A' }}</li>
                 <li class="list-group-item"><strong>Estimated Cost:</strong> ₹{{ selectedSpot?.cost || 'N/A' }}</li>
               </ul>
 
@@ -310,6 +312,93 @@ export default {
                 </div>
               </div>
 
+
+              <div class="container mt-5">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <h2 class="mb-0 text-primary"><i class="fas fa-history me-2"></i>Parking History</h2>
+                </div>
+
+                <!-- Search Controls -->
+                <div class="row g-3 align-items-center mb-4">
+                  <div class="col-md-4">
+                    <label class="form-label mb-0">Filter By</label>
+                    <select class="form-select shadow-sm" v-model="searchField">
+                      <option value="">-- Select Field --</option>
+                      <option value="id">Spot ID</option>
+                      <option value="user_id">Customer ID</option>
+                      <option value="user_name">Customer Name</option>
+                      <option value="city">City</option>
+                      <option value="area">Area</option>
+                      <option value="lot_name">Lot Name</option>
+                      <option value="vehicle_number">Vehicle No</option>
+                      <option value="status">Status</option>
+                    </select>
+                  </div>
+                  <div class="col-md-5">
+                    <label class="form-label mb-0">Search</label>
+                    <input
+                      type="text"
+                      class="form-control shadow-sm"
+                      placeholder="Enter search value..."
+                      v-model="searchQuery"
+                    />
+                  </div>
+                </div>
+
+                <!-- History Table -->
+                <div class="table-responsive shadow-sm border rounded">
+                  <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Spot ID</th>
+                        <th>Customer Name</th>
+                        <th>City</th>
+                        <th>Area</th>
+                        <th>Lot Name</th>
+                        <th>Vehicle No</th>
+                        <th>Check-in</th>
+                        <th>Check-out</th>
+                        <th>Status</th>
+                        <th>Estimated Cost (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="res in filteredReservationHistory" :key="res.id">
+                        <td>{{ res.id }}</td>
+                        <td>{{ res.user_name || 'N/A' }}</br>User Id : {{ res.user_id }}</td>
+                        <td>{{ res.city }}</td>
+                        <td>{{ res.area }}</td>
+                        <td>{{ res.lot_name }}</td>
+                        <td>{{ res.vehicle_number }}</td>
+                        <td>
+                          <div>{{ formatDate(res.check_in).date }}</div>
+                          <small class="text-muted">{{ formatDate(res.check_in).time }}</small>
+                        </td>
+                        <td>
+                          <div>{{ formatDate(res.check_out).date }}</div>
+                          <small class="text-muted">{{ formatDate(res.check_out).time }}</small>
+                        </td>
+
+                        <td>
+                          <span class="badge" :class="res.status === 'active' ? 'bg-success' : 'bg-secondary'">
+                            {{ res.status }}
+                          </span>
+                        </td>
+                        <td>₹{{ res.cost }}</td>
+                      </tr>
+                      <tr v-if="filteredReservationHistory.length === 0">
+                        <td colspan="11" class="text-center text-muted py-4">
+                          <i class="fas fa-info-circle me-2"></i>No matching reservation history found.
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+
+
+
       </div>
     </div>
     `,
@@ -331,6 +420,10 @@ export default {
             selectedSpot: null,
             showSpotOModal: false,
             showSpotAModal: false,
+            reservationHistory: [],
+            searchField: '',
+            searchQuery: '',
+
 
 
             newLot: {
@@ -353,6 +446,23 @@ export default {
         this.fetchAdminData();
         this.fetchUsers();
     },
+
+    computed: {
+      filteredReservationHistory() {
+        if (!this.searchField || !this.searchQuery) return this.reservationHistory;
+
+        return this.reservationHistory.filter(res => {
+          const val = String(res[this.searchField] || '').toLowerCase();
+          return val.includes(this.searchQuery.toLowerCase());
+        });
+      },
+        active_reservations() {
+          return this.reservationHistory.filter(res => res.status === 'active');
+        }
+      
+
+    },
+
     methods: {
         async fetchAdminData() {
             this.loading = true;
@@ -502,8 +612,10 @@ export default {
                 status: spot.status,
                 spotNumber: spot.spot_number,
                 customerId: spot.reservation?.user_id,
+                userName: spot.reservation?.user_name[0],
                 vehicleNumber: spot.reservation?.vehicle_number,
                 checkIn: spot.reservation?.check_in,
+                checkOut: spot.reservation?.check_out,
                 cost: spot.reservation?.cost
               };
               this.showSpotOModal = true;
@@ -564,9 +676,11 @@ export default {
           this.showAddForm = false;
         },
         formatDate(dateStr) {
-            if (!dateStr) return 'N/A';
-            const d = new Date(dateStr);
-            return d.toLocaleString(); // Or format it as you like
+          if (!dateStr) return { date: 'N/A', time: '' };
+          const d = new Date(dateStr);
+          const date = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+          const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+          return { date, time };
         },
 
         async deleteSpot() {
@@ -602,7 +716,24 @@ export default {
               console.error('Delete spot error:', error);
               alert('Error: ' + error.message);
             }
-          }
+          },
+
+          async fetchReservationHistory() {
+              try {
+                const token = localStorage.getItem('auth_token');
+                const res = await fetch('/api/admin/reservations', {
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authentication-Token': token
+                  }
+                });
+                const data = await res.json();
+                this.reservationHistory = Array.isArray(data) ? data : [];
+              } catch (err) {
+                console.error("Failed to fetch reservation history:", err);
+              }
+            },
+
 
       
 
@@ -611,6 +742,8 @@ export default {
     },
     mounted() {
         this.fetchParkingLots();
+        this.fetchReservationHistory();
+
 
     },
    

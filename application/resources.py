@@ -114,12 +114,33 @@ class ParkingLotResource(Resource):
 
             lots = query.all()
             result = []
+
+
             for lot in lots:
-                spots = [{
-                    'id': s.id,
-                    'spot_number': s.spot_number,
-                    'status': s.status
-                } for s in lot.spots]
+                spots = []
+                for s in lot.spots:
+                    spot_data = {
+                        'id': s.id,
+                        'spot_number': s.spot_number,
+                        'status': s.status
+                    }
+
+                    if s.status == 'O':
+                        reservation = Reservation.query.filter_by(spot_id=s.id, status='active').first()
+                        if reservation:
+                            user = User.query.get(reservation.user_id)
+                            user_name= user.name if user else 'Unknown',
+                            spot_data['reservation'] = {
+                                'user_id': reservation.user_id,
+                                'user_name': user_name if user else 'Unknown',
+                                'vehicle_number': reservation.vehicle_number,
+                                'check_in': reservation.check_in.isoformat(),
+                                'check_out': reservation.check_out.isoformat() if reservation.check_out else None,
+                                'status': reservation.status,
+                                'cost': float(reservation.cost or 0.0)
+                            }
+
+                    spots.append(spot_data)
 
                 this_lot = {
                     'id': lot.id,
@@ -136,14 +157,13 @@ class ParkingLotResource(Resource):
                 }
                 result.append(this_lot)
 
-            if result:
-                return result, 200
-            else:
-                return {'message': 'No parking lots found'}, 404
+            return result if result else {'message': 'No parking lots found'}, 200
+
         except Exception as e:
             import traceback
             traceback.print_exc()
             return {'error': str(e)}, 500
+
 
 
 
@@ -572,6 +592,35 @@ class AdminUserProfileResource(Resource):
             return jsonify(user_list)
         except Exception as e:
             return {'message': str(e)}, 500
+        
+# admin_resources.py
+class AdminReservationHistoryResource(Resource):
+    @auth_required('token')
+    @roles_required('admin')
+    def get(self):
+        try:
+            reservations = Reservation.query.order_by(Reservation.check_in.desc()).all()
+            data = []
+            for r in reservations:
+                user = User.query.get(r.user_id)
+                data.append({
+                    'id': r.id,
+                    'spot_id': r.spot_id,
+                    'user_id': r.user_id,
+                    'user_name': user.name if user else 'Unknown',
+                    'city': r.spot.lot.city if r.spot and r.spot.lot else 'Unknown',
+                    'area': r.spot.lot.area if r.spot and r.spot.lot else 'Unknown',
+                    'lot_name': r.spot.lot.name if r.spot and r.spot.lot else 'Unknown',
+                    'vehicle_number': r.vehicle_number,
+                    'check_in': r.check_in.isoformat(),
+                    'check_out': r.check_out.isoformat() if r.check_out else None,
+                    'cost': float(r.cost or 0.0),
+                    'status': r.status
+                })
+            return data, 200
+        except Exception as e:
+            return {'message': str(e)}, 500
+
 
 # Register resources
 api.add_resource(ParkingLotResource, '/api/lots', '/api/lots/<int:lot_id>')
@@ -582,4 +631,6 @@ api.add_resource(UserBookingsResource, '/api/user/bookings')
 api.add_resource(UserProfileResource, '/api/user/profile')
 api.add_resource(AdminProfileResource, '/api/admin/profile')
 api.add_resource(AdminUserProfileResource, '/api/admin/users')
+api.add_resource(AdminReservationHistoryResource, '/api/admin/reservations')
+
 

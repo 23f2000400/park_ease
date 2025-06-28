@@ -1,26 +1,162 @@
 export default {
   template: `
-  <div class="container py-5">
-    <div class="card mx-auto p-4" style="max-width: 500px;">
-      <h4 class="text-center mb-4">Payment</h4>
-        <p><strong>Parking Lot:</strong> {{ lot_name }}</p>
-        <p><strong>Area:</strong> {{ area }}</p>
-        <p><strong>Address:</strong> {{ address }}</p>
-        <p><strong>Pincode:</strong> {{ pincode }}</p>
+  <div class="payment-desktop-page">
+    <div class="payment-desktop-container">
+      <!-- Cute Header -->
+      <div class="cute-desktop-header">
+        <img src="https://cdn-icons-png.flaticon.com/512/2777/2777166.png" class="desktop-parking-icon">
+        <h1 class="desktop-title">Parking Payment Receipt</h1>
+        <div class="desktop-divider">
+          <span class="desktop-dot"></span>
+          <span class="desktop-dot"></span>
+          <span class="desktop-dot"></span>
+        </div>
+      </div>
 
-      <p><strong>City</strong> {{ city }}</p>
-      <p><strong>Vehicle:</strong> {{ vehicle_number }}</p>
-        <p><strong>Spot ID:</strong> {{ spot_id }}</p>
-        <p><strong>Check-in:</strong> {{ check_in }}</p>
-        <p><strong>Check-out:</strong> {{ check_out }}</p>
-        <p><strong>Duration:</strong> {{ new Date(check_out) - new Date(check_in) }} ms</p>
-      <p><strong>Cost:</strong> ₹{{ cost }}</p>
+      <!-- Main Content Area -->
+      <div class="desktop-content-area">
+        <!-- Left Column - Parking Details -->
+        <div class="desktop-left-column">
+          <div class="desktop-details-card">
+            <h3 class="desktop-card-title">
+              <i class="fas fa-parking"></i> Parking Information
+            </h3>
+            
+            <div class="desktop-detail-grid">
+              <div class="desktop-detail-item">
+                <span class="desktop-emoji">🏢</span>
+                <div>
+                  <div class="desktop-label">Parking Lot</div>
+                  <div class="desktop-value">{{ lot_name }}</div>
+                </div>
+              </div>
 
-      <button class="btn btn-success w-100 mt-3" @click="confirmPayment">Pay & Confirm</button>
+              <div class="desktop-detail-item">
+                <span class="desktop-emoji">📍</span>
+                <div>
+                  <div class="desktop-label">Location</div>
+                  <div class="desktop-value">{{ area }}, {{ city }}</div>
+                </div>
+              </div>
+
+              <div class="desktop-detail-item">
+                <span class="desktop-emoji">🏠</span>
+                <div>
+                  <div class="desktop-label">Address</div>
+                  <div class="desktop-value">{{ address }}</div>
+                </div>
+              </div>
+
+              <div class="desktop-detail-item">
+                <span class="desktop-emoji">📮</span>
+                <div>
+                  <div class="desktop-label">Pincode</div>
+                  <div class="desktop-value">{{ pincode }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="desktop-details-card">
+            <h3 class="desktop-card-title">
+              <i class="fas fa-car"></i> Vehicle Details
+            </h3>
+            
+            <div class="desktop-detail-grid">
+              <div class="desktop-detail-item">
+                <span class="desktop-emoji">🚗</span>
+                <div>
+                  <div class="desktop-label">Vehicle Number</div>
+                  <div class="desktop-value vehicle-number">{{ vehicle_number }}</div>
+                </div>
+              </div>
+
+              <div class="desktop-detail-item">
+                <span class="desktop-emoji">🅿️</span>
+                <div>
+                  <div class="desktop-label">Spot ID</div>
+                  <div class="desktop-value spot-id">#{{ spot_id }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column - Payment Summary -->
+        <div class="desktop-right-column">
+          <div class="desktop-summary-card">
+            <h3 class="desktop-card-title">
+              <i class="fas fa-clock"></i> Parking Duration
+            </h3>
+
+            <div class="desktop-time-display">
+            <div class="desktop-time-box check-in">
+                <div class="desktop-time-emoji">⏱️</div>
+                <div class="desktop-time-label">Check-in</div>
+                <div class="desktop-time-value">
+                <div>{{ formatDate(check_in) }}</div>
+                <div class="time-small">{{ formatTime(check_in) }}</div>
+                </div>
+            </div>
+
+            <div class="desktop-duration-arrow">➡️</div>
+
+            <div class="desktop-time-box check-out">
+                <div class="desktop-time-emoji">⏰</div>
+                <div class="desktop-time-label">Check-out</div>
+                <div class="desktop-time-value">
+                <div>{{ formatDate(check_out) }}</div>
+                <div class="time-small">{{ formatTime(check_out) }}</div>
+                </div>
+            </div>
+            </div>
+
+
+            <div class="text-center">
+              <i >   </i>    {{ formatDuration(check_in, check_out) }}
+            </div></br>
+
+            <div class="desktop-payment-summary">
+              <h3 class="desktop-card-title">
+                <i class="fas fa-file-invoice-dollar"></i> Payment Summary
+              </h3>
+
+              <div class="desktop-price-breakdown">
+                <div class="desktop-price-row">
+                  <span>Parking Fee</span>
+                  <span>₹{{ cost }}</span>
+                </div>
+                <div class="desktop-price-row total">
+                  <span>Total Amount</span>
+                  <span>₹{{ cost }}</span>
+                </div>
+              </div>
+
+              <button class="desktop-pay-button" @click="confirmPayment">
+                <i class="fas fa-lock"></i> Pay & Confirm
+                <span class="desktop-bouncing-arrow">👉</span>
+              </button>
+
+              <div class="desktop-security">
+                <i class="fas fa-shield-alt"></i> Secure SSL Encrypted Payment
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cute Footer -->
+      <div class="desktop-footer">
+        <p>Thank you for parking with us! 💖</p>
+        <div class="desktop-footer-emojis">
+          <span>🚗</span>
+          <span>🛣️</span>
+          <span>🏁</span>
+        </div>
+      </div>
     </div>
   </div>
-`,
-
+  `,
 
   computed: {
     spot_id() { return this.$route.query.spot_id },
@@ -34,16 +170,27 @@ export default {
     pincode() { return this.$route.query.pincode },
     city() { return this.$route.query.city }
   },
+
   methods: {
+    formatDuration(start, end) {
+      const diffMs = new Date(end) - new Date(start);
+      const hours = Math.floor(diffMs / (1000 * 60 * 60));
+      const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      
+      if (hours > 0) {
+        return `${hours} hour${hours > 1 ? 's' : ''} ${minutes} min`;
+      }
+      return `${minutes} minutes`;
+    },
+
     async confirmPayment() {
       try {
         const payload = {
           spot_id: this.spot_id,
           vehicle_number: this.vehicle_number,
           check_in: this.check_in,
-            check_out: this.check_out,
-            hours: Math.ceil((new Date(this.check_out) - new Date(this.check_in)) / (1000 * 60 * 60)), // convert ms to hours
-            
+          check_out: this.check_out,
+          hours: Math.ceil((new Date(this.check_out) - new Date(this.check_in)) / (1000 * 60 * 60))
         };
 
         const response = await fetch('/api/reservations', {
@@ -58,12 +205,41 @@ export default {
         const data = await response.json();
         if (!response.ok) throw new Error(data.message || 'Booking failed.');
 
-        alert('Payment & booking successful!');
+        alert('🎉 Payment & booking successful!');
         this.$router.push('/user/home');
       } catch (e) {
-        alert('Error: ' + e.message);
+        alert('😢 Error: ' + e.message);
       }
-    }
-  }
-}
+    },
 
+    formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        weekday: 'short', 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    },
+  
+    formatTime(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true 
+      });
+    },
+
+    formatDuration(start, end) {
+      const diffMs = new Date(end) - new Date(start);
+      const hours = Math.floor(diffMs / (1000 * 60 * 60));
+      const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      
+      if (hours > 0) {
+        return `${hours} hour${hours > 1 ? 's' : ''} ${minutes} min`;
+      }
+      return `${minutes} minutes`;
+    },
+}
+}
