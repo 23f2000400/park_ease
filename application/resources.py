@@ -329,38 +329,87 @@ class ReservationResource(Resource):
         reservation = Reservation.query.get(reservation_id)
         if not reservation:
             return {'message': 'Reservation not found'}, 404
-            
-        # Authorization check
+
+        # Security check
         if not current_user.has_role('admin') and reservation.user_id != current_user.id:
             return {'message': 'Unauthorized'}, 403
-            
+
         if reservation.status != 'active':
             return {'message': f'Reservation is not active (current = {reservation.status})'}, 400
-            
+
         try:
             reservation.check_out = datetime.utcnow()
-            
-            # Calculate final cost based on time spent
-            if not reservation.cost:
-                hours = (reservation.check_out - reservation.check_in).total_seconds() / 3600
-                reservation.cost = math.ceil(hours) * reservation.spot.lot.price
 
+            # ⚠️ Check if check_out is before check_in (user released too early)
+            if reservation.check_out < reservation.check_in:
+                return {
+                    'message': 'Cannot release before the scheduled check-in time.',
+                    'check_in': reservation.check_in.isoformat(),
+                    'now': reservation.check_out.isoformat()
+                }, 400
 
-            
+            delta = reservation.check_out - reservation.check_in
+            total_hours = math.ceil(delta.total_seconds() / 3600)
+            minutes = round((delta.total_seconds() % 3600) / 60)
+
+            hourly_rate = reservation.spot.lot.price
+            reservation.cost = total_hours * hourly_rate
+
             reservation.status = 'completed'
             reservation.spot.status = 'A'
-            
+
             db.session.commit()
-            
+
             return {
                 'message': 'Checked out successfully',
                 'final_cost': float(reservation.cost),
-                'total_hours': round((reservation.check_out - reservation.check_in).total_seconds() / 3600, 2)
-            },200
-            
+                'total_hours': total_hours,
+                'duration': f"{total_hours}h {minutes}m"
+            }, 200
+
         except Exception as e:
             db.session.rollback()
             return {'message': str(e)}, 400
+
+    @auth_required('token')
+    def delete(self, reservation_id):
+        reservation = Reservation.query.get(reservation_id)
+        if not reservation:
+            return {'message': 'Reservation not found'}, 404
+
+        # Ensure user is owner or admin
+        if not current_user.has_role('admin') and reservation.user_id != current_user.id:
+            return {'message': 'Unauthorized'}, 403
+
+        if reservation.status != 'active':
+            return {'message': 'Only active reservations can be cancelled'}, 400
+
+        try:
+            now = datetime.utcnow()
+            if reservation.check_in and now >= reservation.check_in:
+                return {'message': 'Cannot cancel after check-in time'}, 400
+
+            reservation.status = 'cancelled'
+            reservation.spot.status = 'A'
+
+            # Optional refund logic
+            refund_amount = float(reservation.cost or 0.0)
+
+            db.session.commit()
+
+            return {
+                'message': 'Reservation cancelled',
+                'refund_amount': refund_amount
+            }, 200
+
+        except Exception as e:
+            db.session.rollback()
+            return {'message': str(e)}, 500
+
+
+
+
+
         
 
 class UserBookingsResource(Resource):
@@ -386,7 +435,10 @@ class UserBookingsResource(Resource):
                     'cost': float(res.cost) if res.cost else 0.0,
                     'parking_lot': {
                         'name': lot.name,
+                        'city': lot.city,
+                        'area': lot.area,
                         'address': lot.address,
+                        'pincode': lot.pincode,
                         'price': float(lot.price)
                     },
                     'vehicle_number': res.vehicle_number
