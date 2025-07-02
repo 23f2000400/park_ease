@@ -141,8 +141,9 @@ class Reservation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     spot_id = db.Column(db.Integer, db.ForeignKey('parking_spot.id'), nullable=False)
-    check_in = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    check_out = db.Column(db.DateTime)
+    check_in = db.Column(db.DateTime(timezone=True), nullable=False)
+    check_out = db.Column(db.DateTime(timezone=True), nullable=True)
+
     vehicle_number = db.Column(db.String(20), nullable=False)
     cost = db.Column(db.Numeric(10, 2))  # More precise for monetary values
     status = db.Column(db.String(20), default=ReservationStatus.ACTIVE.value)

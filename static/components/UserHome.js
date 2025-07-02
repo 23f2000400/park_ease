@@ -184,6 +184,24 @@ template: `
           </ul>
         </div>
       </section>
+      <!-- Refund Confirmation Modal -->
+<div v-if="showRefundModal" class="modal-overlay"
+     style="position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1050;">
+  <div class="bg-white rounded shadow-lg p-4" style="width: 400px; max-width: 90%;">
+    <h5 class="text-success text-center mb-3">
+      <i class="fas fa-rupee-sign me-2"></i>Refund Issued
+    </h5>
+    <p class="text-center fs-5">Your reservation has been cancelled.</p>
+    <p class="text-center fs-6">Refund Amount: <strong>₹{{ refundInfo.amount }}</strong></p>
+    <div class="d-flex justify-content-end">
+      <button class="btn btn-outline-primary" @click="showRefundModal = false">
+        <i class="fas fa-check me-1"></i>OK
+      </button>
+    </div>
+  </div>
+</div>
+
     </main>
   </div>
 `,
@@ -200,7 +218,9 @@ template: `
       isLoading: true,
       error: null,
       showSpotOModal: false,
-      selectedBooking: null
+      selectedBooking: null,
+      showRefundModal: false,         // 👈 for refund modal
+      refundInfo: { amount: 0 }   
     };
   },
 
@@ -250,22 +270,24 @@ template: `
     },
 
     releaseBooking(id) {
-      if (!confirm('Release this spot?')) return;
-      fetch(`/api/reservations/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authentication-Token': localStorage.getItem('auth_token')
-        }
-      })
-        .then(res => res.json().then(data => ({ ok: res.ok, data })))
-        .then(({ ok, data }) => {
-          if (!ok) throw new Error(data.message);
-          alert(`Released. Cost ₹${data.final_cost} for ${data.total_hours} hours.`);
-          this.fetchUserData();
-        })
-        .catch(e => alert('Failed to release booking: ' + e.message));
-    },
+  if (!confirm('Release this spot?')) return;
+
+  fetch(`/api/reservations/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authentication-Token': localStorage.getItem('auth_token')
+    }
+  })
+    .then(res => res.json().then(data => ({ ok: res.ok, data })))
+    .then(({ ok, data }) => {
+      console.log("Release response:", data); // 👈 Add this for debugging
+      if (!ok) throw new Error(data.message);
+      alert(`Released. Cost ₹${data.final_cost} for ${data.total_hours} hours.`);
+      this.fetchUserData();
+    })
+    .catch(e => alert('Failed to release booking: ' + e.message));
+},
 
     formatDate(d) {
       return new Date(d).toLocaleDateString();
@@ -317,6 +339,7 @@ template: `
     },
 cancelBooking(id) {
   if (!confirm('Cancel this reservation?')) return;
+
   fetch(`/api/reservations/${id}`, {
     method: 'DELETE',
     headers: {
@@ -326,17 +349,19 @@ cancelBooking(id) {
     .then(res => res.json().then(data => ({ ok: res.ok, data })))
     .then(({ ok, data }) => {
       if (!ok) throw new Error(data.message);
-      
-      // 👇 Update status locally so filtered view updates instantly
+
       this.bookings = this.bookings.map(b =>
         b.id === id ? { ...b, status: 'cancelled' } : b
       );
 
-    alert(`Reservation cancelled. ₹${data.refund_amount.toFixed(2)} refunded.`);
+      this.refundInfo.amount = parseFloat(data.refund_amount || 0).toFixed(2);
+      this.showRefundModal = true;
+
       this.fetchUserData();
     })
-    .catch(e => this.$toast.error('Cancel failed: ' + e.message));
+    .catch(e => alert('Cancel failed: ' + e.message));
 },
+
 
 
       canCancel(booking) {

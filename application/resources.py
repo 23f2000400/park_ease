@@ -10,6 +10,8 @@ from datetime import datetime, timedelta, timezone
 import pytz
 
 IST = pytz.timezone("Asia/Kolkata")
+now = datetime.now(IST)
+
 from .models import Reservation, ParkingLot
 import random
  # Install via pip if not already: pip install python-dateutil
@@ -332,12 +334,10 @@ class ReservationResource(Resource):
 
     @auth_required('token')
     def put(self, reservation_id):
-        """Check out (release) a parking reservation early or late"""
         reservation = Reservation.query.get(reservation_id)
         if not reservation:
             return {'message': 'Reservation not found'}, 404
 
-        # Check ownership or admin
         if not current_user.has_role('admin') and reservation.user_id != current_user.id:
             return {'message': 'Unauthorized'}, 403
 
@@ -347,27 +347,26 @@ class ReservationResource(Resource):
         try:
             now = datetime.now(IST)
 
-            # Cannot release before check-in
-            if now < reservation.check_in:
+            check_in_time = reservation.check_in
+            if check_in_time.tzinfo is None or check_in_time.tzinfo.utcoffset(check_in_time) is None:
+                check_in_time = IST.localize(check_in_time)
+            else:
+                check_in_time = check_in_time.astimezone(IST)
+
+            if now < check_in_time:
                 return {
                     'message': 'Cannot release before the scheduled check-in time.',
-                    'check_in': reservation.check_in.isoformat(),
+                    'check_in': check_in_time.isoformat(),
                     'now': now.isoformat()
                 }, 400
 
-            # If actual release time is after original check_out, update the check_out
             reservation.check_out = now
-            # Else, retain the user-scheduled checkout
-
-            # Calculate cost based on actual time
-            delta = reservation.check_out - reservation.check_in
+            delta = reservation.check_out - check_in_time
             total_hours = math.ceil(delta.total_seconds() / 3600)
             minutes = round((delta.total_seconds() % 3600) / 60)
 
             hourly_rate = reservation.spot.lot.price
             reservation.cost = total_hours * hourly_rate
-
-            # Update status
             reservation.status = 'completed'
             reservation.spot.status = 'A'
 
@@ -384,6 +383,7 @@ class ReservationResource(Resource):
         except Exception as e:
             db.session.rollback()
             return {'message': str(e)}, 500
+
 
 
     @auth_required('token')
