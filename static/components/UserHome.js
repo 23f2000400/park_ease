@@ -313,22 +313,29 @@ template: `
     extendBooking(id) {
       alert('Extend logic placeholder');
     },
-    cancelBooking(id) {
-      if (!confirm('Cancel this reservation?')) return;
-      fetch(`/api/reservations/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authentication-Token': localStorage.getItem('auth_token')
-        }
-      })
-        .then(res => res.json().then(data => ({ ok: res.ok, data })))
-        .then(({ ok, data }) => {
-          if (!ok) throw new Error(data.message);
-          this.$toast.success(`Reservation cancelled. ₹${data.refund_amount} refunded.`);
-          this.fetchUserData();
-        })
-        .catch(e => this.$toast.error('Cancel failed: ' + e.message));
-    },
+cancelBooking(id) {
+  if (!confirm('Cancel this reservation?')) return;
+  fetch(`/api/reservations/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Authentication-Token': localStorage.getItem('auth_token')
+    }
+  })
+    .then(res => res.json().then(data => ({ ok: res.ok, data })))
+    .then(({ ok, data }) => {
+      if (!ok) throw new Error(data.message);
+      
+      // 👇 Update status locally so filtered view updates instantly
+      this.bookings = this.bookings.map(b =>
+        b.id === id ? { ...b, status: 'cancelled' } : b
+      );
+
+      this.$toast.success(`Reservation cancelled. ₹${data.refund_amount} refunded.`);
+      this.fetchUserData();
+    })
+    .catch(e => this.$toast.error('Cancel failed: ' + e.message));
+},
+
 
       canCancel(booking) {
         if (booking.status !== 'active') return false;

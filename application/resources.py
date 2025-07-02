@@ -6,9 +6,10 @@ from flask_security import auth_required, roles_required, current_user
 from datetime import datetime
 import math
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from .models import Reservation, ParkingLot
 import random
+ # Install via pip if not already: pip install python-dateutil
 
 
 api = Api()
@@ -278,59 +279,63 @@ class ReservationResource(Resource):
         """Create a new reservation"""
         args = self.parser.parse_args()
         spot = ParkingSpot.query.get(args['spot_id'])
-        
+
         if not spot:
             return {'message': 'Parking spot not found'}, 404
-            
+
         if spot.status == 'O':
             return {'message': 'Spot is already occupied'}, 400
-            
+
         try:
-            # Calculate cost if hours are provided (for pre-booking)
-            cost = None
-            if args.get('hours'):
-                cost = spot.lot.price * args['hours']
-            
-            check_in_time = datetime.utcnow()
+            check_in_time = datetime.now(timezone.utc)
+
+            # Parse check_in from ISO string and make it timezone-aware
             if args.get('check_in'):
-                try:
-                    check_in_time = datetime.fromisoformat(args['check_in'].replace('Z', '+00:00'))
-                except Exception:
-                    return {'message': 'Invalid check_in format. Use ISO format.'}, 400
+                check_in_time = datetime.fromisoformat(args['check_in'].replace('Z', '+00:00')).astimezone(timezone.utc)
+
+            # Parse check_out if present
+            check_out_time = None
+            if args.get('check_out'):
+                check_out_time = datetime.fromisoformat(args['check_out'].replace('Z', '+00:00')).astimezone(timezone.utc)
+
+            # Calculate cost if both times are valid
+            if check_out_time and check_out_time > check_in_time:
+                delta_hours = math.ceil((check_out_time - check_in_time).total_seconds() / 3600)
+                cost = spot.lot.price * delta_hours
 
             reservation = Reservation(
                 user_id=current_user.id,
                 spot_id=spot.id,
                 vehicle_number=args['vehicle_number'],
-                cost=cost,
                 check_in=check_in_time,
-                check_out=None  # Initially no check-out time
+                check_out=check_out_time,
+                cost=cost
             )
-            
+
             spot.status = 'O'
-            
             db.session.add(reservation)
             db.session.commit()
-            
+
             return {
                 'message': 'Reservation created successfully',
                 'reservation_id': reservation.id,
                 'check_in': reservation.check_in.isoformat(),
-                'estimated_cost': float(cost)
+                'check_out': reservation.check_out.isoformat() if reservation.check_out else None,
+                'estimated_cost': float(reservation.cost or 0.0)
             }, 201
-            
+
         except Exception as e:
             db.session.rollback()
             return {'message': str(e)}, 400
 
     @auth_required('token')
     def put(self, reservation_id):
-        """Check out from a reservation"""
+        """Check out (release) a parking reservation early or late"""
         reservation = Reservation.query.get(reservation_id)
         if not reservation:
             return {'message': 'Reservation not found'}, 404
 
-        # Security check
+        # Check ownership or admin
         if not current_user.has_role('admin') and reservation.user_id != current_user.id:
             return {'message': 'Unauthorized'}, 403
 
@@ -338,16 +343,21 @@ class ReservationResource(Resource):
             return {'message': f'Reservation is not active (current = {reservation.status})'}, 400
 
         try:
-            reservation.check_out = datetime.utcnow()
+            now = datetime.utcnow()
 
-            # ⚠️ Check if check_out is before check_in (user released too early)
-            if reservation.check_out < reservation.check_in:
+            # Cannot release before check-in
+            if now < reservation.check_in:
                 return {
                     'message': 'Cannot release before the scheduled check-in time.',
                     'check_in': reservation.check_in.isoformat(),
-                    'now': reservation.check_out.isoformat()
+                    'now': now.isoformat()
                 }, 400
 
+            # If actual release time is after original check_out, update the check_out
+            reservation.check_out = now
+            # Else, retain the user-scheduled checkout
+
+            # Calculate cost based on actual time
             delta = reservation.check_out - reservation.check_in
             total_hours = math.ceil(delta.total_seconds() / 3600)
             minutes = round((delta.total_seconds() % 3600) / 60)
@@ -355,6 +365,7 @@ class ReservationResource(Resource):
             hourly_rate = reservation.spot.lot.price
             reservation.cost = total_hours * hourly_rate
 
+            # Update status
             reservation.status = 'completed'
             reservation.spot.status = 'A'
 
@@ -364,12 +375,14 @@ class ReservationResource(Resource):
                 'message': 'Checked out successfully',
                 'final_cost': float(reservation.cost),
                 'total_hours': total_hours,
-                'duration': f"{total_hours}h {minutes}m"
+                'duration': f"{total_hours}h {minutes}m",
+                'check_out_updated': now.isoformat()
             }, 200
 
         except Exception as e:
             db.session.rollback()
-            return {'message': str(e)}, 400
+            return {'message': str(e)}, 500
+
 
     @auth_required('token')
     def delete(self, reservation_id):
