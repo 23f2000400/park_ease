@@ -42,15 +42,17 @@ template: `
       <section class="quick-actions">
         <h2 class="section-title">Quick Actions</h2>
         <div class="action-grid">
-          <button class="action-btn" @click="navigateToNewBooking">
-            <i class="fas fa-plus-circle"></i><span>New Booking</span>
+          <button class="action-btn" @click="navigateToFindParking">
+            <i class="fas fa-map-marked-alt"></i><span>Find Parking</span>
           </button>
           <button class="action-btn" @click="showAllBookings">
             <i class="fas fa-calendar-alt"></i><span>My Bookings</span>
           </button>
-          <button class="action-btn" @click="navigateToFindParking">
-            <i class="fas fa-map-marked-alt"></i><span>Find Parking</span>
+          
+          <button class="action-btn" @click="navigateToBookingHistory" >
+            <i class="fas fa-plus-circle"></i><span> Bookings History</span>
           </button>
+
         </div>
       </section>
 
@@ -298,8 +300,8 @@ template: `
       this.currentPage = 1;
     },
 
-    navigateToNewBooking() {
-      this.$router.push('/bookings/new');
+    navigateToBookingHistory() {
+      this.$router.push('/user/bookings-history');
     },
     navigateToFindParking() {
       this.$router.push('/find-parking');
@@ -330,7 +332,7 @@ cancelBooking(id) {
         b.id === id ? { ...b, status: 'cancelled' } : b
       );
 
-      this.$toast.success(`Reservation cancelled. ₹${data.refund_amount} refunded.`);
+    alert(`Reservation cancelled. ₹${data.refund_amount.toFixed(2)} refunded.`);
       this.fetchUserData();
     })
     .catch(e => this.$toast.error('Cancel failed: ' + e.message));

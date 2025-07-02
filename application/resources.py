@@ -7,6 +7,9 @@ from datetime import datetime
 import math
 
 from datetime import datetime, timedelta, timezone
+import pytz
+
+IST = pytz.timezone("Asia/Kolkata")
 from .models import Reservation, ParkingLot
 import random
  # Install via pip if not already: pip install python-dateutil
@@ -287,18 +290,17 @@ class ReservationResource(Resource):
             return {'message': 'Spot is already occupied'}, 400
 
         try:
-            check_in_time = datetime.now(timezone.utc)
+            # Use Indian Standard Time instead of UTC
+            check_in_time = datetime.now(IST)
 
-            # Parse check_in from ISO string and make it timezone-aware
             if args.get('check_in'):
-                check_in_time = datetime.fromisoformat(args['check_in'].replace('Z', '+00:00')).astimezone(timezone.utc)
+                check_in_time = datetime.fromisoformat(args['check_in']).astimezone(IST)
 
-            # Parse check_out if present
             check_out_time = None
             if args.get('check_out'):
-                check_out_time = datetime.fromisoformat(args['check_out'].replace('Z', '+00:00')).astimezone(timezone.utc)
+                check_out_time = datetime.fromisoformat(args['check_out']).astimezone(IST)
 
-            # Calculate cost if both times are valid
+            cost = 0.0
             if check_out_time and check_out_time > check_in_time:
                 delta_hours = math.ceil((check_out_time - check_in_time).total_seconds() / 3600)
                 cost = spot.lot.price * delta_hours
@@ -343,7 +345,7 @@ class ReservationResource(Resource):
             return {'message': f'Reservation is not active (current = {reservation.status})'}, 400
 
         try:
-            now = datetime.utcnow()
+            now = datetime.now(IST)
 
             # Cannot release before check-in
             if now < reservation.check_in:

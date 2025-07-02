@@ -25,7 +25,7 @@ export default {
         </div>
       </div>
 
-      <!-- Parking Lot Results -->
+      <!-- Parking Lots -->
       <div v-if="parkingLots.length > 0">
         <h5 class="mb-4 text-center">Available Parking in <span class="text-primary">{{ selectedCity }}</span></h5>
         <div class="row g-4">
@@ -35,21 +35,29 @@ export default {
                 <h5 class="card-title text-primary fw-bold">{{ lot.name }}</h5>
                 <p class="card-text small text-muted">
                   <strong>Available:</strong> {{ lot.available_spots }}<br/>
-                  <strong>Occupied:</strong> {{ lot.total_spots - lot.available_spots }}/{{ lot.total_spots }}<br/>
+                  <strong>Occupied:</strong> {{ lot.occupied_spots }}/{{ lot.total_spots }}<br/>
                   <strong>Area:</strong> {{ lot.area }}<br/>
                   <strong>Address:</strong> {{ lot.address }}<br/>
                   <strong>Pincode:</strong> {{ lot.pincode }}<br/>
                   <strong>Price:</strong> ₹{{ lot.price }}/hour
                 </p>
-                <div class="d-flex flex-wrap gap-1">
-                  <button
+
+                <!-- Spot Visualization -->
+                <div class="d-flex flex-wrap gap-1 mb-3">
+                  <span
                     v-for="spot in lot.spots"
                     :key="spot.id"
-                    class="btn btn-sm"
-                    :class="spot.status === 'O' ? 'btn-danger' : 'btn-success'"
-                    @click="handleSpotClick(spot, lot)"
+                    class="badge"
+                    :class="spot.status === 'A' ? 'bg-success' : 'bg-danger'"
                   >
-                    {{ spot.status === 'O' ? 'O' : 'A' }}
+                    {{ spot.status === 'A' ? 'A' : 'O' }}
+                  </span>
+                </div>
+
+                <!-- Book Button -->
+                <div class="d-grid">
+                  <button class="btn btn-primary" :disabled="lot.available_spots === 0" @click="prepareBooking(lot)">
+                    Book
                   </button>
                 </div>
               </div>
@@ -59,7 +67,8 @@ export default {
       </div>
 
       <!-- Booking Modal -->
-      <div v-if="showBookingModal" class="modal-overlay d-flex justify-content-center align-items-center" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1050;">
+      <div v-if="showBookingModal" class="modal-overlay d-flex justify-content-center align-items-center"
+           style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1050;">
         <div class="bg-white p-4 rounded shadow" style="width: 450px;">
           <h5 class="text-center text-primary mb-3">Book the Parking Spot</h5>
 
@@ -116,8 +125,7 @@ export default {
         mode: 'now',
         scheduledCheckIn: '',
         scheduledCheckOut: ''
-      },
-      currentUserId: null
+      }
     };
   },
 
@@ -151,13 +159,17 @@ export default {
       this.parkingLots = await response.json();
     },
 
-    handleSpotClick(spot, lot) {
-      if (spot.status !== 'A') return;
+    prepareBooking(lot) {
+      const spot = lot.spots.find(s => s.status === 'A');
+      if (!spot) return alert('No available spots in this lot.');
+
       this.bookingSpot = {
         spotId: spot.id,
         lotId: lot.id,
         lotName: lot.name
       };
+
+      // Reset form
       this.bookingForm.vehicleNumber = '';
       this.bookingForm.mode = 'now';
       this.bookingForm.scheduledCheckIn = '';
@@ -193,22 +205,10 @@ export default {
           city: this.selectedCity
         }
       });
-    },
-
-    async fetchUserId() {
-      const res = await fetch('/api/user/profile', {
-        headers: {
-          'Authentication-Token': localStorage.getItem('auth_token')
-        },
-        credentials: 'include'
-      });
-      const data = await res.json();
-      this.currentUserId = data.id;
     }
   },
 
   mounted() {
     this.fetchCities();
-    this.fetchUserId();
   }
 };
