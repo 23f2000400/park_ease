@@ -5,6 +5,7 @@ from .database import db
 from flask_security import auth_required, roles_required, current_user
 from datetime import datetime
 import math
+from sqlalchemy import func, case ,desc
 
 from datetime import datetime, timedelta, timezone
 import pytz
@@ -405,6 +406,7 @@ class ReservationResource(Resource):
                 return {'message': 'Cannot cancel after check-in time'}, 400
 
             reservation.status = 'cancelled'
+            reservation.check_out = None  # 🧹 Remove scheduled check-out time
             reservation.spot.status = 'A'
 
             # Optional refund logic
@@ -420,6 +422,7 @@ class ReservationResource(Resource):
         except Exception as e:
             db.session.rollback()
             return {'message': str(e)}, 500
+
 
 
 
@@ -441,13 +444,22 @@ class UserBookingsResource(Resource):
             for res in reservations:
                 # Get associated parking lot details
                 lot = ParkingLot.query.get(res.spot.lot_id)
-                
+
+                # Compute duration
+                duration_str = 'N/A'
+                if res.check_in and res.check_out:
+                    delta = res.check_out - res.check_in
+                    hours = delta.total_seconds() // 3600
+                    minutes = (delta.total_seconds() % 3600) // 60
+                    duration_str = f"{int(hours)}h {int(minutes)}m"
+
                 bookings.append({
                     'id': res.id,
                     'status': res.status,
                     'check_in': res.check_in.isoformat(),
                     'check_out': res.check_out.isoformat() if res.check_out else None,
                     'cost': float(res.cost) if res.cost else 0.0,
+                    'duration': duration_str,
                     'parking_lot': {
                         'name': lot.name,
                         'city': lot.city,
@@ -660,6 +672,48 @@ class AdminUserProfileResource(Resource):
         except Exception as e:
             return {'message': str(e)}, 500
         
+class AdminUserDetail(Resource):
+    @auth_required('token')
+    @roles_required('admin')
+    def get(self, user_id):
+        user = User.query.get_or_404(user_id)
+        return {
+            "id": user.id,
+            "name": user.name,
+            "username": user.username,
+            "email": user.email,
+            "phone": user.phone,
+            "roles": [role.name for role in user.roles],
+            "active": user.active,
+            "created_at": user.created_at.isoformat(),
+
+        }
+
+        
+
+class AdminUserBookings(Resource):
+    @auth_required('token')
+    @roles_required('admin')
+    def get(self, user_id):
+        bookings = Reservation.query.filter_by(user_id=user_id).order_by(Reservation.check_in.desc()).all()
+        result = []
+        for res in bookings:
+            lot = res.spot.lot
+            result.append({
+                "id": res.id,
+                "status": res.status,
+                "check_in": res.check_in.isoformat(),
+                "check_out": res.check_out.isoformat() if res.check_out else None,
+                "cost": float(res.cost or 0),
+                "vehicle_number": res.vehicle_number,
+                "parking_lot": {
+                    "name": lot.name,
+                    "area": lot.area,
+                    "city": lot.city,
+                }
+            })
+        return result, 200
+        
 # admin_resources.py
 class AdminReservationHistoryResource(Resource):
     @auth_required('token')
@@ -670,6 +724,13 @@ class AdminReservationHistoryResource(Resource):
             data = []
             for r in reservations:
                 user = User.query.get(r.user_id)
+                duration = "Cancelled"
+                if r.check_out:
+                    delta = r.check_out - r.check_in
+                    hours = delta.total_seconds() // 3600
+                    minutes = (delta.total_seconds() % 3600) // 60
+                    duration = f"{int(hours)}h {int(minutes)}m"
+
                 data.append({
                     'id': r.id,
                     'spot_id': r.spot_id,
@@ -682,11 +743,71 @@ class AdminReservationHistoryResource(Resource):
                     'check_in': r.check_in.isoformat(),
                     'check_out': r.check_out.isoformat() if r.check_out else None,
                     'cost': float(r.cost or 0.0),
-                    'status': r.status
+                    'status': r.status,
+                    'duration': duration
                 })
             return data, 200
         except Exception as e:
             return {'message': str(e)}, 500
+        
+
+class AdminProfitAnalytics(Resource):
+    @auth_required('token')
+    def get(self):
+        try:
+            now = datetime.now(IST)
+            today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+            # Total profit today
+            today_profit = db.session.query(
+                func.coalesce(func.sum(Reservation.cost), 0)
+            ).filter(
+                Reservation.status == 'completed',
+                Reservation.check_out >= today_start
+            ).scalar()
+
+            # Total profit this month
+            month_profit = db.session.query(
+                func.coalesce(func.sum(Reservation.cost), 0)
+            ).filter(
+                Reservation.status == 'completed',
+                Reservation.check_out >= month_start
+            ).scalar()
+
+            # Top parking lots by revenue
+            lot_revenue = db.session.query(
+                ParkingLot.name.label('lot'),
+                func.sum(Reservation.cost).label('revenue')
+            ).join(ParkingSpot, ParkingSpot.lot_id == ParkingLot.id)\
+             .join(Reservation, Reservation.spot_id == ParkingSpot.id)\
+             .filter(Reservation.status == 'completed')\
+             .group_by(ParkingLot.name)\
+             .order_by(desc('revenue'))\
+             .limit(5).all()
+
+            # Top spots by revenue
+            spot_revenue = db.session.query(
+                ParkingSpot.id.label('spot_id'),
+                ParkingSpot.lot_id.label('lot_id'),
+                func.sum(Reservation.cost).label('revenue')
+            ).join(Reservation, Reservation.spot_id == ParkingSpot.id)\
+             .filter(Reservation.status == 'completed')\
+             .group_by(ParkingSpot.id)\
+             .order_by(desc('revenue'))\
+             .limit(5).all()
+
+            return {
+                'today_profit': float(today_profit or 0),
+                'month_profit': float(month_profit or 0),
+                'top_parking_lots': [{'lot': r.lot, 'revenue': float(r.revenue)} for r in lot_revenue],
+                'top_spots': [{'spot_id': r.spot_id, 'lot_id': r.lot_id, 'revenue': float(r.revenue)} for r in spot_revenue]
+            }
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return {'message': 'Failed to generate analytics', 'error': str(e)}, 500
 
 
 # Register resources
@@ -698,6 +819,10 @@ api.add_resource(UserBookingsResource, '/api/user/bookings')
 api.add_resource(UserProfileResource, '/api/user/profile')
 api.add_resource(AdminProfileResource, '/api/admin/profile')
 api.add_resource(AdminUserProfileResource, '/api/admin/users')
+api.add_resource(AdminUserDetail, '/api/admin/users/<int:user_id>')
 api.add_resource(AdminReservationHistoryResource, '/api/admin/reservations')
+api.add_resource(AdminUserBookings, '/api/admin/users/<int:user_id>/bookings')
+api.add_resource(AdminProfitAnalytics, '/api/admin/profit-analytics')
+
 
 

@@ -9,6 +9,8 @@ import AdminProfile from './components/AdminProfile.js';
 import FindParking from './components/FindParking.js';
 import Payment from './components/Payment.js';
 import UserBookings from './components/UserBookings.js';
+import AdminUserDetails from './components/AdminUserDetails.js';
+import AdminProfit from './components/AdminProfit.js';
 
 
 const routes = [
@@ -21,6 +23,8 @@ const routes = [
     {path: '/find-parking', component: FindParking, meta: { requiresAuth: true } },
     {path: '/payment', component: Payment, meta: { requiresAuth: true } },
     {path: '/user/bookings-history', component: UserBookings, meta: { requiresAuth: true } },
+    {path: '/admin/user/:id', component: AdminUserDetails, meta: { requiresAuth: true, requiresAdmin: true } },
+    {path: '/admin/profit-analytics', component: AdminProfit, meta: { requiresAuth: true, requiresAdmin: true } },
 ]
 
 const router = new VueRouter({

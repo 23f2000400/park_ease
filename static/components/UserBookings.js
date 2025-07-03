@@ -36,7 +36,7 @@ export default {
                         :class="{
                           'bg-primary': booking.status === 'active',
                           'bg-success': booking.status === 'completed',
-                          'bg-secondary': booking.status === 'cancelled'
+                          'bg-danger': booking.status === 'cancelled'
                         }">
                     {{ booking.status.toUpperCase() }}
                   </span>
@@ -99,6 +99,10 @@ export default {
           </div>
         </div>
       </div>
+      <div class="text-center mt-4">
+        <button class="btn btn-outline-secondary" @click="$router.back()">
+          <i class="fas fa-arrow-left me-1"></i> Back
+        </button>
     </div>
   `,
 

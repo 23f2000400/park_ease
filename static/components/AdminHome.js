@@ -36,9 +36,10 @@ export default {
               <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                   <div>
-                    <h5 class="card-title">Total Users - {{ users.length }}</h5>
+                    <i class="fas fa-users fa-3x align-items-center"></i>
+
+                    <h5 class="card-title ">Total Users - {{ users.length }}</h5>
                   </div>
-                  <i class="fas fa-users fa-3x"></i>
                 </div>
               </div>
             </div>
@@ -48,9 +49,10 @@ export default {
               <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                   <div>
+                    <i class="fas fa-parking fa-3x"></i>
+
                     <h5 class="card-title">Parking Spots - {{parkingLots.length}} </h5>
                   </div>
-                  <i class="fas fa-parking fa-3x"></i>
                 </div>
               </div>
             </div>
@@ -60,9 +62,10 @@ export default {
               <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                   <div>
-                    <h5 class="card-title">Active Bookings -{{ active_reservations.length }}</h5>
+                    <i class="fas fa-calendar-check fa-3x"></i>
+
+<h5 class="card-title">Active Bookings - {{ active_reservations.length }}</h5>
                   </div>
-                  <i class="fas fa-calendar-check fa-3x"></i>
                 </div>
               </div>
             </div>
@@ -110,6 +113,12 @@ export default {
             </tr>
           </tbody>
         </table>
+                <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="mb-0">Profit</h2>
+            <button class="btn btn-primary" @click="gotoprofit">
+              <i class="fas fa-plus me-2"></i>Profit
+            </button>
+          </div>
 
         <!-- Parking Lots Section -->
         <div class="py-4">
@@ -313,88 +322,118 @@ export default {
               </div>
 
 
-              <div class="container mt-5">
+ <!-- History Table -->
+               <div class="container mt-5">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                   <h2 class="mb-0 text-primary"><i class="fas fa-history me-2"></i>Parking History</h2>
                 </div>
+      <div class="table-responsive shadow-sm border rounded">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>S No</th>
+              <th>Spot ID</th>
+              <th>Customer Name</th>
+              <th>City</th>
+              <th>Area</th>
+              <th>Lot Name</th>
+              <th>Vehicle No</th>
+              <th>Check-in</th>
+              <th>Check-out</th>
+              <th>Status</th>
+              <th>Estimated Cost (₹)</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(res, index) in paginatedReservationHistory" :key="res.id">
+              <td>{{ (currentPage - 1) * perPage + index + 1 }}</td>
+              <td>{{ res.id }}</td>
+              <td>{{ res.user_name || 'N/A' }}<br/>User Id : {{ res.user_id }}</td>
+              <td>{{ res.city }}</td>
+              <td>{{ res.area }}</td>
+              <td>{{ res.lot_name }}</td>
+              <td>{{ res.vehicle_number }}</td>
+              <td>
+                <div>{{ formatDate(res.check_in).date }}</div>
+                <small class="text-muted">{{ formatDate(res.check_in).time }}</small>
+              </td>
+              <td>
+                <div>{{ formatDate(res.check_out).date }}</div>
+                <small class="text-muted">{{ formatDate(res.check_out).time }}</small>
+              </td>
+              <td>
+                  <span class="badge"
+                        :class="{
+                          'bg-primary': res.status === 'active',
+                          'bg-success': res.status === 'completed',
+                          'bg-danger': res.status === 'cancelled'
+                        }">
+                    {{ res.status.toUpperCase() }}
+                  </span>
+              </td>
+              <td>₹{{ res.cost }}</td>
+              <td>
+                <button class="btn btn-sm btn-outline-primary" @click="showReservationDetails(res)">
+                  <i class="fas fa-info-circle me-1"></i>Details
+                </button>
+              </td>
+            </tr>
+            <tr v-if="paginatedReservationHistory.length === 0">
+              <td colspan="11" class="text-center text-muted py-4">
+                <i class="fas fa-info-circle me-2"></i>No matching reservation history found.
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
-                <!-- Search Controls -->
-                <div class="row g-3 align-items-center mb-4">
-                  <div class="col-md-4">
-                    <label class="form-label mb-0">Filter By</label>
-                    <select class="form-select shadow-sm" v-model="searchField">
-                      <option value="">-- Select Field --</option>
-                      <option value="id">Spot ID</option>
-                      <option value="user_id">Customer ID</option>
-                      <option value="user_name">Customer Name</option>
-                      <option value="city">City</option>
-                      <option value="area">Area</option>
-                      <option value="lot_name">Lot Name</option>
-                      <option value="vehicle_number">Vehicle No</option>
-                      <option value="status">Status</option>
-                    </select>
-                  </div>
-                  <div class="col-md-5">
-                    <label class="form-label mb-0">Search</label>
-                    <input
-                      type="text"
-                      class="form-control shadow-sm"
-                      placeholder="Enter search value..."
-                      v-model="searchQuery"
-                    />
-                  </div>
-                </div>
+        <!-- Pagination Controls -->
+        <div v-if="totalPages > 1" class="d-flex justify-content-center align-items-center gap-3 mt-3">
+          <button class="btn btn-outline-secondary" :disabled="currentPage === 1" @click="currentPage--">
+            <i class="fas fa-chevron-left"></i> Prev
+          </button>
 
-                <!-- History Table -->
-                <div class="table-responsive shadow-sm border rounded">
-                  <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                      <tr>
-                        <th>Spot ID</th>
-                        <th>Customer Name</th>
-                        <th>City</th>
-                        <th>Area</th>
-                        <th>Lot Name</th>
-                        <th>Vehicle No</th>
-                        <th>Check-in</th>
-                        <th>Check-out</th>
-                        <th>Status</th>
-                        <th>Estimated Cost (₹)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="res in filteredReservationHistory" :key="res.id">
-                        <td>{{ res.id }}</td>
-                        <td>{{ res.user_name || 'N/A' }}</br>User Id : {{ res.user_id }}</td>
-                        <td>{{ res.city }}</td>
-                        <td>{{ res.area }}</td>
-                        <td>{{ res.lot_name }}</td>
-                        <td>{{ res.vehicle_number }}</td>
-                        <td>
-                          <div>{{ formatDate(res.check_in).date }}</div>
-                          <small class="text-muted">{{ formatDate(res.check_in).time }}</small>
-                        </td>
-                        <td>
-                          <div>{{ formatDate(res.check_out).date }}</div>
-                          <small class="text-muted">{{ formatDate(res.check_out).time }}</small>
-                        </td>
+          <span class="fw-bold">Page {{ currentPage }} of {{ totalPages }}</span>
 
-                        <td>
-                          <span class="badge" :class="res.status === 'active' ? 'bg-success' : 'bg-secondary'">
-                            {{ res.status }}
-                          </span>
-                        </td>
-                        <td>₹{{ res.cost }}</td>
-                      </tr>
-                      <tr v-if="filteredReservationHistory.length === 0">
-                        <td colspan="11" class="text-center text-muted py-4">
-                          <i class="fas fa-info-circle me-2"></i>No matching reservation history found.
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+          <button class="btn btn-outline-secondary" :disabled="currentPage === totalPages" @click="currentPage++">
+            Next <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Reservation Detail Modal -->
+      <div v-if="selectedReservation" class="modal-overlay"
+           style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1050;">
+        <div class="bg-white rounded shadow-lg p-4" style="width: 450px; max-width: 95%;">
+          <div class="text-center mb-3">
+            <h5 class="text-primary fw-bold"><i class="fas fa-info-circle me-2"></i>Reservation Details</h5>
+            <hr />
+          </div>
+
+          <ul class="list-group list-group-flush mb-3">
+            <li class="list-group-item"><strong>ID:</strong> {{ selectedReservation.id }}</li>
+            <li class="list-group-item"><strong>Status:</strong> {{ selectedReservation.status }}</li>
+            <li class="list-group-item"><strong>Vehicle No:</strong> {{ selectedReservation.vehicle_number }}</li>
+            <li class="list-group-item"><strong>Customer ID:</strong> {{ selectedReservation.user_id }}</li>
+            <li class="list-group-item"><strong>Customer Name:</strong> {{ selectedReservation.user_name }}</li>
+            <li class="list-group-item"><strong>City:</strong> {{ selectedReservation.city }}</li>
+            <li class="list-group-item"><strong>Area:</strong> {{ selectedReservation.area }}</li>
+            <li class="list-group-item"><strong>Lot:</strong> {{ selectedReservation.lot_name }}</li>
+            <li class="list-group-item"><strong>Check-in:</strong> {{ selectedReservation.check_in }}</li>
+            <li class="list-group-item"><strong>Check-out:</strong> {{ selectedReservation.check_out ? (selectedReservation.check_out) : '—' }}</li>
+            <li class="list-group-item"><strong>Duration:</strong> {{ selectedReservation.duration }}</li>
+            <li class="list-group-item"><strong>Cost:</strong> ₹{{ selectedReservation.cost }}</li>
+          </ul>
+
+          <div class="d-flex justify-content-end">
+            <button class="btn btn-secondary" @click="selectedReservation = null">
+              <i class="fas fa-times me-1"></i> Close
+            </button>
+          </div>
+        </div>
+      </div>
+      </div>
+    
 
 
 
@@ -423,6 +462,9 @@ export default {
             reservationHistory: [],
             searchField: '',
             searchQuery: '',
+            selectedReservation: null,
+            currentPage: 1,
+            perPage: 10,
 
 
 
@@ -448,19 +490,35 @@ export default {
     },
 
     computed: {
-      filteredReservationHistory() {
-        if (!this.searchField || !this.searchQuery) return this.reservationHistory;
-
-        return this.reservationHistory.filter(res => {
-          const val = String(res[this.searchField] || '').toLowerCase();
-          return val.includes(this.searchQuery.toLowerCase());
-        });
-      },
+        filteredReservationHistory() {
+          if (!this.searchField || !this.searchQuery) return this.reservationHistory;
+          return this.reservationHistory.filter(res => {
+            const val = String(res[this.searchField] || '').toLowerCase();
+            return val.includes(this.searchQuery.toLowerCase());
+          });
+        },
+        paginatedReservationHistory() {
+          const start = (this.currentPage - 1) * this.perPage;
+          return this.filteredReservationHistory.slice(start, start + this.perPage);
+        },
+        totalPages() {
+          return Math.ceil(this.filteredReservationHistory.length / this.perPage);
+        },
         active_reservations() {
           return this.reservationHistory.filter(res => res.status === 'active');
         }
+      },
+
       
 
+ 
+    watch: {
+      searchField() {
+        this.currentPage = 1;
+      },
+      searchQuery() {
+        this.currentPage = 1;
+      }
     },
 
     methods: {
@@ -528,6 +586,9 @@ export default {
         },
         viewLot(lotId) {
             this.$router.push(`/admin/parking-lot/${lotId}`);
+        },
+        gotoprofit() {
+            this.$router.push('/admin/profit-analytics');
         },
         async createOrUpdateParkingLot() {
             try {
@@ -733,6 +794,10 @@ export default {
                 console.error("Failed to fetch reservation history:", err);
               }
             },
+
+        showReservationDetails(reservation) {
+            this.selectedReservation = reservation;
+        }
 
 
       

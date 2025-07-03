@@ -1,5 +1,5 @@
 export default {
-template: `
+  template: `
   <div class="parking-dashboard">
     <header class="dashboard-header">
       <div class="user-greeting">
@@ -48,11 +48,9 @@ template: `
           <button class="action-btn" @click="showAllBookings">
             <i class="fas fa-calendar-alt"></i><span>My Bookings</span>
           </button>
-          
-          <button class="action-btn" @click="navigateToBookingHistory" >
-            <i class="fas fa-plus-circle"></i><span> Bookings History</span>
+          <button class="action-btn" @click="navigateToBookingHistory">
+            <i class="fas fa-plus-circle"></i><span>Bookings History</span>
           </button>
-
         </div>
       </section>
 
@@ -71,15 +69,13 @@ template: `
           <i class="fas fa-info-circle me-2"></i> No {{ currentFilter }} bookings found.
         </div>
 
-        <!-- Updated Booking Cards Grid -->
         <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
           <div v-for="booking in paginatedBookings" :key="booking.id" class="col d-flex">
-            <div class="card shadow-sm w-100 h-100"
-                 :class="{'border-danger': booking.status === 'active', 'border-success': booking.status === 'completed'}">
+            <div class="card shadow-sm w-100 h-100" :class="{'border-danger': booking.status === 'active', 'border-success': booking.status === 'completed'}">
               <div class="card-header fw-semibold text-uppercase position-relative">
                 {{ booking.status === 'active' ? 'Active Booking' : 'Completed Booking' }}
                 <span class="badge rounded-pill status-badge"
-                      :class="{'bg-primary': booking.status === 'active', 'bg-success': booking.status === 'completed', 'bg-danger': booking.status === 'cancelled'} ">
+                      :class="{'bg-primary': booking.status === 'active', 'bg-success': booking.status === 'completed', 'bg-danger': booking.status === 'cancelled'}">
                   {{ booking.status.toUpperCase() }}
                 </span>
               </div>
@@ -88,27 +84,19 @@ template: `
                   <i class="fas fa-parking me-2" :class="{'text-primary': booking.status === 'active', 'text-success': booking.status === 'completed', 'text-danger': booking.status === 'cancelled'}"></i>
                   {{ booking.parking_lot.name }}
                 </h5>
-                
                 <p class="text-muted small mb-2">
                   <i class="fas fa-map-marker-alt me-1"></i>{{ booking.parking_lot.address }}
                 </p>
-
                 <ul class="list-unstyled mb-3">
                   <li><i class="fas fa-calendar-day me-1"></i>Check-in: <strong>{{ formatDateTime(booking.check_in) }}</strong></li>
-                  <li v-if="booking.check_out">
-                    <i class="fas fa-sign-out-alt me-1"></i>Check-out: <strong>{{ formatDateTime(booking.check_out) }}</strong>
-                  </li>
-                  <li v-if="booking.check_out">
-                    <i class="fas fa-clock me-1"></i>Duration: <strong>{{ calculateDuration(booking.check_in, booking.check_out) }}</strong>
-                  </li>
+                  <li><i class="fas fa-sign-out-alt me-1"></i>Check-out: <strong>{{ booking.check_out ? formatDateTime(booking.check_out) : '—' }}</strong></li>
+                  <li><i class="fas fa-clock me-1"></i>Duration: <strong>{{ booking.duration || (booking.check_out ? calculateDuration(booking.check_in, booking.check_out) : 'N/A') }}</strong></li>
                   <li><i class="fas fa-rupee-sign me-1"></i>Cost: <strong>{{ formatCurrency(booking.cost) }}</strong></li>
                 </ul>
-
                 <div class="d-flex flex-wrap gap-2 mt-auto">
                   <button class="btn btn-sm btn-outline-primary" @click="openBookingDetails(booking)">
                     <i class="fas fa-info-circle me-1"></i>Details
                   </button>
-
                   <button v-if="canCancel(booking)" class="btn btn-sm btn-outline-warning" @click="cancelBooking(booking.id)">
                     <i class="fas fa-clock me-1"></i>Cancel
                   </button>
@@ -121,8 +109,7 @@ template: `
           </div>
         </div>
 
-        <!-- Pagination -->
-                <div v-if="totalPages > 1" class="text-center mt-4">
+        <div v-if="totalPages > 1" class="text-center mt-4">
           <button class="btn btn-outline-secondary me-2" :disabled="currentPage === 1" @click="currentPage--">
             <i class="fas fa-chevron-left me-1"></i>Prev
           </button>
@@ -132,42 +119,36 @@ template: `
           </button>
         </div>
       </section>
-            <!-- details -->
 
-
-          <div v-if="showSpotOModal && selectedBooking" class="modal-overlay"
-     style="position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1050;">
-  <div class="bg-white rounded shadow-lg p-4" style="width: 450px; max-width: 95%;">
-    <div class="text-center mb-3">
-      <h5 class="text-danger fw-bold"><i class="fas fa-info-circle me-2"></i>Booking Details</h5>
-      <hr />
-    </div>
-
-    <ul class="list-group list-group-flush mb-3">
-      <li class="list-group-item"><strong>ID:</strong> {{ selectedBooking.id }}</li>
-      <li class="list-group-item"><strong>Status:</strong> {{ selectedBooking.status }}</li>
-      <li class="list-group-item"><strong>Vehicle No:</strong> {{ selectedBooking.vehicle_number }}</li>
-      <li class="list-group-item"><strong>Parking Lot:</strong> {{ selectedBooking.parking_lot.name }}</li>
-      <li class="list-group-item"><strong>City:</strong> {{ selectedBooking.parking_lot.city }}</li>
-      <li class="list-group-item"><strong>Area:</strong> {{ selectedBooking.parking_lot.area }}</li>
-      <li class="list-group-item"><strong>Address:</strong> {{ selectedBooking.parking_lot.address }}</li>
-      <li class="list-group-item"><strong>Pincode:</strong> {{ selectedBooking.parking_lot.pincode }}</li>
-      <li class="list-group-item"><strong>Check-in:</strong> {{ formatDateTime(selectedBooking.check_in) }}</li>
-      <li class="list-group-item"><strong>Check-out:</strong> {{ formatDateTime(selectedBooking.check_out) }}</li>
-      <li class="list-group-item"><strong>Cost:</strong> ₹{{ formatCurrency(selectedBooking.cost) }}</li>
-    </ul>
-
-    <div class="d-flex justify-content-end">
-      <button class="btn btn-secondary" @click="showSpotOModal = false">
-        <i class="fas fa-times me-1"></i> Close
-      </button>
-    </div>
-  </div>
-</div>
-
-
-      <!-- Recent Activity -->
+      <!-- Booking Details Modal -->
+      <div v-if="showSpotOModal && selectedBooking" class="modal-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1050;">
+        <div class="bg-white rounded shadow-lg p-4" style="width: 450px; max-width: 95%;">
+          <div class="text-center mb-3">
+            <h5 class="text-danger fw-bold"><i class="fas fa-info-circle me-2"></i>Booking Details</h5>
+            <hr />
+          </div>
+          <ul class="list-group list-group-flush mb-3">
+            <li class="list-group-item"><strong>ID:</strong> {{ selectedBooking.id }}</li>
+            <li class="list-group-item"><strong>Status:</strong> {{ selectedBooking.status }}</li>
+            <li class="list-group-item"><strong>Vehicle No:</strong> {{ selectedBooking.vehicle_number }}</li>
+            <li class="list-group-item"><strong>Parking Lot:</strong> {{ selectedBooking.parking_lot.name }}</li>
+            <li class="list-group-item"><strong>City:</strong> {{ selectedBooking.parking_lot.city }}</li>
+            <li class="list-group-item"><strong>Area:</strong> {{ selectedBooking.parking_lot.area }}</li>
+            <li class="list-group-item"><strong>Address:</strong> {{ selectedBooking.parking_lot.address }}</li>
+            <li class="list-group-item"><strong>Pincode:</strong> {{ selectedBooking.parking_lot.pincode }}</li>
+            <li class="list-group-item"><strong>Check-in:</strong> {{ formatDateTime(selectedBooking.check_in) }}</li>
+            <li class="list-group-item"><strong>Check-out:</strong> {{ selectedBooking.check_out ? formatDateTime(selectedBooking.check_out) : '—' }}</li>
+            <li class="list-group-item"><strong>Duration:</strong> {{ selectedBooking.duration || (selectedBooking.check_out ? calculateDuration(selectedBooking.check_in, selectedBooking.check_out) : 'Cancelled') }}</li>
+            <li class="list-group-item"><strong>Cost:</strong> ₹{{ formatCurrency(selectedBooking.cost) }}</li>
+          </ul>
+          <div class="d-flex justify-content-end">
+            <button class="btn btn-secondary" @click="showSpotOModal = false">
+              <i class="fas fa-times me-1"></i> Close
+            </button>
+          </div>
+        </div>
+      </div>
+       <!-- Recent Activity -->
       <section class="activity-section mt-5">
         <div class="recent-activity">
           <h2 class="section-title">Recent Activity</h2>
@@ -184,28 +165,25 @@ template: `
           </ul>
         </div>
       </section>
-      <!-- Refund Confirmation Modal -->
-<div v-if="showRefundModal" class="modal-overlay"
-     style="position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1050;">
-  <div class="bg-white rounded shadow-lg p-4" style="width: 400px; max-width: 90%;">
-    <h5 class="text-success text-center mb-3">
-      <i class="fas fa-rupee-sign me-2"></i>Refund Issued
-    </h5>
-    <p class="text-center fs-5">Your reservation has been cancelled.</p>
-    <p class="text-center fs-6">Refund Amount: <strong>₹{{ refundInfo.amount }}</strong></p>
-    <div class="d-flex justify-content-end">
-      <button class="btn btn-outline-primary" @click="showRefundModal = false">
-        <i class="fas fa-check me-1"></i>OK
-      </button>
+    </main>
+       <!-- Refund Confirmation Modal -->
+  <div v-if="showRefundModal" class="modal-overlay"
+      style="position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+              background: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1050;">
+    <div class="bg-white rounded shadow-lg p-4" style="width: 400px; max-width: 90%;">
+      <h5 class="text-success text-center mb-3">
+        <i class="fas me-2"></i>Refund Issued
+      </h5>
+      <p class="text-center fs-5">Your reservation has been cancelled.</p>
+      <p class="text-center fs-6">Refund Amount: <strong>₹{{ refundInfo.amount }}</strong></p>
+      <div class="d-flex justify-content-end">
+        <button class="btn btn-outline-primary" @click="showRefundModal = false">
+          <i class="fas fa-check me-1"></i>OK
+        </button>
+      </div>
     </div>
   </div>
-</div>
-
-    </main>
-  </div>
-`,
-
+  `,
 
   data() {
     return {

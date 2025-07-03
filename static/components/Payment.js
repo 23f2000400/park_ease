@@ -155,8 +155,28 @@ export default {
         </div>
       </div>
     </div>
+      <div v-if="showSuccessModal" class="modal-overlay"
+      style="position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+              background: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1050;">
+<div class="bg-white rounded shadow-lg p-4" style="width: 400px; max-width: 90%;">
+    <h5 class="text-success text-center mb-3">
+      <i class="fas me-2"></i>Order Placed Successfully 🎉
+    </h5>
+    <p class="text-center fs-5">Your reservation has been successfully placed.</p>
+    <p class="text-center fs-6">Check your reservation history</p>
+    <div class="d-flex justify-content-end">
+      <button class="btn btn-outline-primary" @click="closeModal">
+        <i class="fas fa-check me-1"></i>OK
+      </button>
+    </div>
   </div>
+</div>
   `,
+  data() {
+    return {
+      showSuccessModal: false
+    };
+  },
 
   computed: {
     spot_id() { return this.$route.query.spot_id },
@@ -204,9 +224,8 @@ export default {
 
         const data = await response.json();
         if (!response.ok) throw new Error(data.message || 'Booking failed.');
+        this.showSuccessModal = true;
 
-        alert('🎉 Payment & booking successful!');
-        this.$router.push('/user/home');
       } catch (e) {
         alert('😢 Error: ' + e.message);
       }
@@ -241,5 +260,9 @@ export default {
       }
       return `${minutes} minutes`;
     },
+    closeModal() {
+      this.showSuccessModal = false;
+      this.$router.push('/user/home');
+    }
 }
 }
