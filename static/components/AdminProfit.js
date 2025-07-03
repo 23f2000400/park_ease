@@ -229,6 +229,40 @@ export default {
         </div>
       </div>
     </div>
+    <!-- Profit Breakdown -->
+<div class="breakdown-section">
+  <h2 class="text-primary mb-3"><i class="fas fa-chart-pie me-2"></i>Profit Breakdown</h2>
+  <div class="row">
+    <!-- Today's Breakdown -->
+    <div class="col-md-6 mb-4">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title text-success"><i class="fas fa-calendar-day me-2"></i>Today</h5>
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item"><strong>Completed Bookings:</strong> {{ analytics.breakdown.today.bookings }}</li>
+            <li class="list-group-item"><strong>Average Cost:</strong> ₹{{ analytics.breakdown.today.avg_cost.toFixed(2) }}</li>
+            <li class="list-group-item"><strong>Top Earning Lot:</strong> {{ analytics.breakdown.today.top_lot }} (₹{{ analytics.breakdown.today.top_cost.toFixed(2) }})</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Monthly Breakdown -->
+    <div class="col-md-6 mb-4">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title text-info"><i class="fas fa-calendar-alt me-2"></i>This Month</h5>
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item"><strong>Completed Bookings:</strong> {{ analytics.breakdown.month.bookings }}</li>
+            <li class="list-group-item"><strong>Average Cost:</strong> ₹{{ analytics.breakdown.month.avg_cost.toFixed(2) }}</li>
+            <li class="list-group-item"><strong>Top Earning Lot:</strong> {{ analytics.breakdown.month.top_lot }} (₹{{ analytics.breakdown.month.top_cost.toFixed(2) }})</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
   </div>
   `,
 

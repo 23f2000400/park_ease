@@ -759,49 +759,87 @@ class AdminProfitAnalytics(Resource):
             today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
             month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-            # Total profit today
-            today_profit = db.session.query(
-                func.coalesce(func.sum(Reservation.cost), 0)
-            ).filter(
+            # ---- Today ----
+            today_reservations = Reservation.query.filter(
                 Reservation.status == 'completed',
                 Reservation.check_out >= today_start
-            ).scalar()
+            )
 
-            # Total profit this month
-            month_profit = db.session.query(
-                func.coalesce(func.sum(Reservation.cost), 0)
-            ).filter(
+            today_profit = today_reservations.with_entities(func.coalesce(func.sum(Reservation.cost), 0)).scalar()
+            today_count = today_reservations.count()
+            today_avg_cost = today_profit / today_count if today_count > 0 else 0
+
+            top_today_lot = db.session.query(
+                ParkingLot.name,
+                func.sum(Reservation.cost).label('total')
+            ).join(ParkingSpot, ParkingSpot.lot_id == ParkingLot.id) \
+            .join(Reservation, Reservation.spot_id == ParkingSpot.id) \
+            .filter(Reservation.status == 'completed', Reservation.check_out >= today_start) \
+            .group_by(ParkingLot.name) \
+            .order_by(desc('total')) \
+            .first()
+
+            # ---- Month ----
+            month_reservations = Reservation.query.filter(
                 Reservation.status == 'completed',
                 Reservation.check_out >= month_start
-            ).scalar()
+            )
 
-            # Top parking lots by revenue
+            month_profit = month_reservations.with_entities(func.coalesce(func.sum(Reservation.cost), 0)).scalar()
+            month_count = month_reservations.count()
+            month_avg_cost = month_profit / month_count if month_count > 0 else 0
+
+            top_month_lot = db.session.query(
+                ParkingLot.name,
+                func.sum(Reservation.cost).label('total')
+            ).join(ParkingSpot, ParkingSpot.lot_id == ParkingLot.id) \
+            .join(Reservation, Reservation.spot_id == ParkingSpot.id) \
+            .filter(Reservation.status == 'completed', Reservation.check_out >= month_start) \
+            .group_by(ParkingLot.name) \
+            .order_by(desc('total')) \
+            .first()
+
+            # ---- Top Parking Lots ----
             lot_revenue = db.session.query(
                 ParkingLot.name.label('lot'),
                 func.sum(Reservation.cost).label('revenue')
-            ).join(ParkingSpot, ParkingSpot.lot_id == ParkingLot.id)\
-             .join(Reservation, Reservation.spot_id == ParkingSpot.id)\
-             .filter(Reservation.status == 'completed')\
-             .group_by(ParkingLot.name)\
-             .order_by(desc('revenue'))\
-             .limit(5).all()
+            ).join(ParkingSpot, ParkingSpot.lot_id == ParkingLot.id) \
+            .join(Reservation, Reservation.spot_id == ParkingSpot.id) \
+            .filter(Reservation.status == 'completed') \
+            .group_by(ParkingLot.name) \
+            .order_by(desc('revenue')) \
+            .limit(5).all()
 
-            # Top spots by revenue
+            # ---- Top Spots ----
             spot_revenue = db.session.query(
                 ParkingSpot.id.label('spot_id'),
                 ParkingSpot.lot_id.label('lot_id'),
                 func.sum(Reservation.cost).label('revenue')
-            ).join(Reservation, Reservation.spot_id == ParkingSpot.id)\
-             .filter(Reservation.status == 'completed')\
-             .group_by(ParkingSpot.id)\
-             .order_by(desc('revenue'))\
-             .limit(5).all()
+            ).join(Reservation, Reservation.spot_id == ParkingSpot.id) \
+            .filter(Reservation.status == 'completed') \
+            .group_by(ParkingSpot.id) \
+            .order_by(desc('revenue')) \
+            .limit(5).all()
 
             return {
                 'today_profit': float(today_profit or 0),
                 'month_profit': float(month_profit or 0),
                 'top_parking_lots': [{'lot': r.lot, 'revenue': float(r.revenue)} for r in lot_revenue],
-                'top_spots': [{'spot_id': r.spot_id, 'lot_id': r.lot_id, 'revenue': float(r.revenue)} for r in spot_revenue]
+                'top_spots': [{'spot_id': r.spot_id, 'lot_id': r.lot_id, 'revenue': float(r.revenue)} for r in spot_revenue],
+                'breakdown': {
+                    'today': {
+                        'bookings': today_count,
+                        'avg_cost': round(float(today_avg_cost), 2),
+                        'top_lot': top_today_lot.name if top_today_lot else None,
+                        'top_cost': float(top_today_lot.total) if top_today_lot else 0.0
+                    },
+                    'month': {
+                        'bookings': month_count,
+                        'avg_cost': round(float(month_avg_cost), 2),
+                        'top_lot': top_month_lot.name if top_month_lot else None,
+                        'top_cost': float(top_month_lot.total) if top_month_lot else 0.0
+                    }
+                }
             }
 
         except Exception as e:
