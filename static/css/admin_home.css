@@ -1,0 +1,83 @@
+ .admin-dashboard h1,
+  h2,
+  h5 {
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+
+  .card-title {
+    font-size: 1.25rem;
+  }
+
+  .stat-card {
+    transition: transform 0.2s ease;
+    border-radius: 12px;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-5px);
+  }
+
+  .table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+  }
+
+  .table td,
+  .table th {
+    vertical-align: middle;
+  }
+
+  .modal-content {
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from {
+      transform: scale(0.9);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  .spot-box {
+    transition: all 0.2s;
+    font-size: 0.75rem;
+    border-radius: 6px;
+  }
+
+  .spot-box:hover {
+    transform: scale(1.1);
+  }
+
+  .modal-content ul.list-group li {
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+  }
+
+  .btn {
+    transition: background-color 0.2s ease, transform 0.2s ease;
+  }
+
+  .btn:hover {
+    transform: scale(1.03);
+  }
+
+  .modal-overlay {
+    backdrop-filter: blur(4px);
+  }
+
+  .form-control,
+  .form-select {
+    border-radius: 8px;
+    box-shadow: none;
+  }
+
+  .form-control:focus,
+  .form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+  }
