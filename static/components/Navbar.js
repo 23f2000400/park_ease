@@ -21,6 +21,9 @@ export default {
                         <router-link class="nav-link" to="/register">Register</router-link>
                     </li>
                     <li class="nav-item px-3">
+                        <router-link class="nav-link" to="/admin/summary">Summary</router-link>
+                    </li>
+                    <li class="nav-item px-3">
                         <router-link class="nav-link" to="/api/logout">Logout</router-link>
                     </li>
                 </ul>

@@ -11,7 +11,7 @@ import Payment from './components/Payment.js';
 import UserBookings from './components/UserBookings.js';
 import AdminUserDetails from './components/AdminUserDetails.js';
 import AdminProfit from './components/AdminProfit.js';
-
+import AdminSummary from './components/AdminSummary.js';
 
 const routes = [
     {path: '/', component: Home},
@@ -25,6 +25,7 @@ const routes = [
     {path: '/user/bookings-history', component: UserBookings, meta: { requiresAuth: true } },
     {path: '/admin/user/:id', component: AdminUserDetails, meta: { requiresAuth: true, requiresAdmin: true } },
     {path: '/admin/profit-analytics', component: AdminProfit, meta: { requiresAuth: true, requiresAdmin: true } },
+    {path: '/admin/summary', component: AdminSummary, meta: { requiresAuth: true, requiresAdmin: true } },
 ]
 
 const router = new VueRouter({

@@ -9,6 +9,7 @@ from sqlalchemy import func, case ,desc
 
 from datetime import datetime, timedelta, timezone
 import pytz
+import calendar
 
 IST = pytz.timezone("Asia/Kolkata")
 now = datetime.now(IST)
@@ -411,6 +412,8 @@ class ReservationResource(Resource):
 
             # Optional refund logic
             refund_amount = float(reservation.cost or 0.0)
+            reservation.cost = 0.0  # 🧹 Reset cost
+
 
             db.session.commit()
 
@@ -649,15 +652,30 @@ class AdminProfileResource(Resource):
             return {'message': str(e)}, 500
         
 
+from sqlalchemy.orm import joinedload
+
 class AdminUserProfileResource(Resource):
     @auth_required('token')
     @roles_required('admin')
     def get(self):
-        """Get all users' profiles for admin"""
+        """Get all users with role 'user' only"""
         try:
-            users = User.query.all()
+            user_role = Role.query.filter_by(name='user').first()
+            if not user_role:
+                return {'message': 'User role not found'}, 404
+
+            users = User.query\
+                .join(User.roles)\
+                .filter(Role.name == 'user')\
+                .options(joinedload(User.roles))\
+                .all()
+
             user_list = []
             for user in users:
+                # Optional: skip those with multiple roles
+                if len(user.roles) != 1 or user.roles[0].name != 'user':
+                    continue
+
                 user_list.append({
                     'id': user.id,
                     'name': user.name,
@@ -668,9 +686,14 @@ class AdminUserProfileResource(Resource):
                     'roles': roles_list(user.roles),
                     'active': user.active
                 })
+
             return jsonify(user_list)
+
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             return {'message': str(e)}, 500
+ 
         
 class AdminUserDetail(Resource):
     @auth_required('token')
@@ -753,6 +776,7 @@ class AdminReservationHistoryResource(Resource):
 
 class AdminProfitAnalytics(Resource):
     @auth_required('token')
+    @roles_required('admin')
     def get(self):
         try:
             now = datetime.now(IST)
@@ -764,88 +788,230 @@ class AdminProfitAnalytics(Resource):
                 Reservation.status == 'completed',
                 Reservation.check_out >= today_start
             )
+            today_profit = float(today_reservations.with_entities(func.sum(Reservation.cost)).scalar() or 0)
 
-            today_profit = today_reservations.with_entities(func.coalesce(func.sum(Reservation.cost), 0)).scalar()
-            today_count = today_reservations.count()
-            today_avg_cost = today_profit / today_count if today_count > 0 else 0
-
-            top_today_lot = db.session.query(
-                ParkingLot.name,
-                func.sum(Reservation.cost).label('total')
-            ).join(ParkingSpot, ParkingSpot.lot_id == ParkingLot.id) \
-            .join(Reservation, Reservation.spot_id == ParkingSpot.id) \
-            .filter(Reservation.status == 'completed', Reservation.check_out >= today_start) \
-            .group_by(ParkingLot.name) \
-            .order_by(desc('total')) \
-            .first()
-
-            # ---- Month ----
+            # ---- This Month ----
             month_reservations = Reservation.query.filter(
                 Reservation.status == 'completed',
                 Reservation.check_out >= month_start
             )
+            month_profit = float(month_reservations.with_entities(func.sum(Reservation.cost)).scalar() or 0)
 
-            month_profit = month_reservations.with_entities(func.coalesce(func.sum(Reservation.cost), 0)).scalar()
-            month_count = month_reservations.count()
-            month_avg_cost = month_profit / month_count if month_count > 0 else 0
+            # ---- Daily Average ----
+            days_in_month = now.day
+            daily_average = month_profit / days_in_month if days_in_month else 0
 
-            top_month_lot = db.session.query(
-                ParkingLot.name,
-                func.sum(Reservation.cost).label('total')
-            ).join(ParkingSpot, ParkingSpot.lot_id == ParkingLot.id) \
-            .join(Reservation, Reservation.spot_id == ParkingSpot.id) \
-            .filter(Reservation.status == 'completed', Reservation.check_out >= month_start) \
-            .group_by(ParkingLot.name) \
-            .order_by(desc('total')) \
-            .first()
-
-            # ---- Top Parking Lots ----
-            lot_revenue = db.session.query(
+            # ---- Top Parking Lots with Avg Occupancy ----
+            lots_data = db.session.query(
                 ParkingLot.name.label('lot'),
-                func.sum(Reservation.cost).label('revenue')
+                func.sum(Reservation.cost).label('revenue'),
+                func.avg(
+                    case((ParkingSpot.status == 'O', 100), else_=0)
+                ).label('occupancy')
             ).join(ParkingSpot, ParkingSpot.lot_id == ParkingLot.id) \
-            .join(Reservation, Reservation.spot_id == ParkingSpot.id) \
-            .filter(Reservation.status == 'completed') \
-            .group_by(ParkingLot.name) \
-            .order_by(desc('revenue')) \
-            .limit(5).all()
+             .outerjoin(Reservation, Reservation.spot_id == ParkingSpot.id) \
+             .group_by(ParkingLot.name).order_by(desc('revenue')).limit(5).all()
 
-            # ---- Top Spots ----
-            spot_revenue = db.session.query(
-                ParkingSpot.id.label('spot_id'),
-                ParkingSpot.lot_id.label('lot_id'),
-                func.sum(Reservation.cost).label('revenue')
-            ).join(Reservation, Reservation.spot_id == ParkingSpot.id) \
-            .filter(Reservation.status == 'completed') \
-            .group_by(ParkingSpot.id) \
-            .order_by(desc('revenue')) \
-            .limit(5).all()
+            top_parking_lots = [{
+                'lot': row.lot,
+                'revenue': float(row.revenue or 0),
+                'occupancy': float(row.occupancy or 0)
+            } for row in lots_data]
+
+            # ---- Top Users by Revenue ----
+            users_data = db.session.query(
+                User.id.label('user_id'),
+                User.name,
+                User.email,
+                func.sum(Reservation.cost).label('total_spent')
+            ).join(Reservation, Reservation.user_id == User.id) \
+             .filter(Reservation.status == 'completed') \
+             .group_by(User.id, User.name, User.email) \
+             .order_by(desc('total_spent')).limit(5).all()
+
+            top_users = [{
+                'user_id': u.user_id,
+                'name': u.name,
+                'email': u.email,
+                'total_spent': float(u.total_spent or 0)
+            } for u in users_data]
+
+            # ---- Total Vehicles ----
+            total_vehicles = db.session.query(Reservation.vehicle_number).filter(
+                Reservation.vehicle_number != None,
+                Reservation.status == 'completed'
+            ).distinct().count()
+
+            # ---- Avg Duration ----
+            durations = db.session.query(
+                func.avg(func.strftime('%s', Reservation.check_out) - func.strftime('%s', Reservation.check_in))
+            ).filter(
+                Reservation.check_in != None,
+                Reservation.check_out != None,
+                Reservation.status == 'completed'
+            ).scalar()
+            durations = float(durations or 0)
+            hours = int(durations // 3600)
+            minutes = int((durations % 3600) // 60)
+            avg_duration = f"{hours}h {minutes}m"
+
+            # ---- Overall Occupancy ----
+            total_spots = db.session.query(ParkingSpot).count()
+            occupied_spots = db.session.query(ParkingSpot).filter(ParkingSpot.status == 'O').count()
+            overall_occupancy = (occupied_spots / total_spots) * 100 if total_spots else 0
 
             return {
-                'today_profit': float(today_profit or 0),
-                'month_profit': float(month_profit or 0),
-                'top_parking_lots': [{'lot': r.lot, 'revenue': float(r.revenue)} for r in lot_revenue],
-                'top_spots': [{'spot_id': r.spot_id, 'lot_id': r.lot_id, 'revenue': float(r.revenue)} for r in spot_revenue],
-                'breakdown': {
-                    'today': {
-                        'bookings': today_count,
-                        'avg_cost': round(float(today_avg_cost), 2),
-                        'top_lot': top_today_lot.name if top_today_lot else None,
-                        'top_cost': float(top_today_lot.total) if top_today_lot else 0.0
-                    },
-                    'month': {
-                        'bookings': month_count,
-                        'avg_cost': round(float(month_avg_cost), 2),
-                        'top_lot': top_month_lot.name if top_month_lot else None,
-                        'top_cost': float(top_month_lot.total) if top_month_lot else 0.0
-                    }
-                }
-            }
+                'today_profit': today_profit,
+                'month_profit': month_profit,
+                'daily_average': round(daily_average, 2),
+                'days_in_month': days_in_month,
+                'top_parking_lots': top_parking_lots,
+                'top_users': top_users,
+                'total_vehicles': total_vehicles,
+                'avg_duration': avg_duration,
+                'overall_occupancy': round(overall_occupancy, 2)
+            }, 200
 
         except Exception as e:
             import traceback
             traceback.print_exc()
             return {'message': 'Failed to generate analytics', 'error': str(e)}, 500
+class AdminSummary(Resource):
+    @auth_required('token')
+    @roles_required('admin')
+    def get(self):
+        try:
+            now = datetime.now(IST)
+            today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+            # ---- Today ----
+            today_reservations = Reservation.query.filter(
+                Reservation.status == 'completed',
+                Reservation.check_out >= today_start
+            )
+            today_profit = float(today_reservations.with_entities(func.sum(Reservation.cost)).scalar() or 0)
+
+            # ---- This Month ----
+            month_reservations = Reservation.query.filter(
+                Reservation.status == 'completed',
+                Reservation.check_out >= month_start
+            )
+            month_profit = float(month_reservations.with_entities(func.sum(Reservation.cost)).scalar() or 0)
+
+            # ---- Daily Average ----
+            days_in_month = now.day
+            daily_average = month_profit / days_in_month if days_in_month else 0
+
+            # ---- Top Parking Lots with Avg Occupancy ----
+            lots_data = db.session.query(
+                ParkingLot.name.label('lot'),
+                func.sum(Reservation.cost).label('revenue'),
+                func.avg(
+                    case((ParkingSpot.status == 'O', 100), else_=0)
+                ).label('occupancy')
+            ).join(ParkingSpot, ParkingSpot.lot_id == ParkingLot.id) \
+             .outerjoin(Reservation, Reservation.spot_id == ParkingSpot.id) \
+             .group_by(ParkingLot.name).order_by(desc('revenue')).limit(5).all()
+
+            top_parking_lots = [{
+                'lot': row.lot,
+                'revenue': float(row.revenue or 0),
+                'occupancy': float(row.occupancy or 0)
+            } for row in lots_data]
+
+            # ---- Top Users by Revenue ----
+            users_data = db.session.query(
+                User.id.label('user_id'),
+                User.name,
+                User.email,
+                func.sum(Reservation.cost).label('total_spent')
+            ).join(Reservation, Reservation.user_id == User.id) \
+             .filter(Reservation.status == 'completed') \
+             .group_by(User.id, User.name, User.email) \
+             .order_by(desc('total_spent')).limit(5).all()
+
+            top_users = [{
+                'user_id': u.user_id,
+                'name': u.name,
+                'email': u.email,
+                'total_spent': float(u.total_spent or 0)
+            } for u in users_data]
+
+            # ---- Total Vehicles ----
+            total_vehicles = db.session.query(Reservation.vehicle_number).filter(
+                Reservation.vehicle_number != None,
+                Reservation.status == 'completed'
+            ).distinct().count()
+
+            # ---- Avg Duration ----
+            durations = db.session.query(
+                func.avg(func.strftime('%s', Reservation.check_out) - func.strftime('%s', Reservation.check_in))
+            ).filter(
+                Reservation.check_in != None,
+                Reservation.check_out != None,
+                Reservation.status == 'completed'
+            ).scalar()
+            durations = float(durations or 0)
+            hours = int(durations // 3600)
+            minutes = int((durations % 3600) // 60)
+            avg_duration = f"{hours}h {minutes}m"
+
+            # ---- Overall Occupancy ----
+            total_spots = db.session.query(ParkingSpot).count()
+            occupied_spots = db.session.query(ParkingSpot).filter(ParkingSpot.status == 'O').count()
+            overall_occupancy = (occupied_spots / total_spots) * 100 if total_spots else 0
+
+            # ---- Revenue by Lot (for chart) ----
+            revenue_by_lot = db.session.query(
+                ParkingLot.name.label('name'),
+                func.sum(Reservation.cost).label('revenue')
+            ).join(ParkingSpot, ParkingSpot.lot_id == ParkingLot.id) \
+            .join(Reservation, Reservation.spot_id == ParkingSpot.id) \
+            .filter(Reservation.status == 'completed') \
+            .group_by(ParkingLot.name).all()
+
+            revenue_chart_data = [{
+                'name': r.name,
+                'revenue': float(r.revenue or 0)
+            } for r in revenue_by_lot]
+
+            # ---- Occupancy Summary (for chart) ----
+            occupancy_data = db.session.query(
+                ParkingLot.name.label('lot'),
+                func.count(ParkingSpot.id).label('total'),
+                func.count(case((ParkingSpot.status == 'O', 1))).label('occupied')
+            ).join(ParkingSpot, ParkingLot.id == ParkingSpot.lot_id) \
+            .group_by(ParkingLot.name).all()
+
+            occupancy_chart_data = [{
+                'lot': row.lot,
+                'occupied': row.occupied,
+                'available': row.total - row.occupied
+            } for row in occupancy_data]
+
+
+            return {
+                'today_profit': today_profit,
+                'month_profit': month_profit,
+                'daily_average': round(daily_average, 2),
+                'days_in_month': days_in_month,
+                'top_parking_lots': top_parking_lots,
+                'top_users': top_users,
+                'total_vehicles': total_vehicles,
+                'avg_duration': avg_duration,
+                'overall_occupancy': round(overall_occupancy, 2),
+                'revenue_by_lot': revenue_chart_data,
+                'occupancy_summary': occupancy_chart_data
+            }, 200
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return {'message': 'Failed to generate analytics', 'error': str(e)}, 500
+
+
+
 
 
 # Register resources
@@ -861,6 +1027,7 @@ api.add_resource(AdminUserDetail, '/api/admin/users/<int:user_id>')
 api.add_resource(AdminReservationHistoryResource, '/api/admin/reservations')
 api.add_resource(AdminUserBookings, '/api/admin/users/<int:user_id>/bookings')
 api.add_resource(AdminProfitAnalytics, '/api/admin/profit-analytics')
+api.add_resource(AdminSummary, '/api/admin/summary')
 
 
 

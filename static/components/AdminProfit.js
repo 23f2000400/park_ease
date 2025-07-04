@@ -1,272 +1,120 @@
 export default {
-    template: `
-  <div class="profit-analytics-pc">
-    <!-- Dashboard Header -->
-    <div class="dashboard-header">
-      <div class="header-content">
-        <h1 class="dashboard-title">
-          <i class="fas fa-chart-line"></i> Profit Analytics Dashboard
-        </h1>
-        <p class="dashboard-subtitle">Comprehensive overview of your parking business performance</p>
-      </div>
-      <div class="header-aside">
-        <div class="last-updated">
-          <i class="fas fa-sync-alt"></i> Updated: {{ new Date().toLocaleString() }}
-        </div>
-      </div>
+  template: `
+  <div class="container py-5">
+    <h2 class="mb-4 text-primary"><i class="fas fa-chart-line me-2"></i>Profit Analytics</h2>
+
+    <div v-if="loading" class="text-center my-5">
+      <div class="spinner-border text-primary"></div>
     </div>
 
-    <!-- Loading State -->
-    <div v-if="loading" class="loading-overlay">
-      <div class="loading-content">
-        <div class="spinner"></div>
-        <p>Analyzing profit data...</p>
-      </div>
-    </div>
-
-    <!-- Main Content -->
-    <div v-else class="dashboard-content">
-      <!-- Summary Cards Row -->
-      <div class="summary-row">
-        <div class="summary-card profit-card">
-          <div class="card-icon">
-            <i class="fas fa-rupee-sign"></i>
-          </div>
-          <div class="card-content">
-            <h3>Today's Profit</h3>
-            <div class="card-value">₹{{ (analytics.today_profit || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}</div>
-            <div class="card-footer">
-              <span class="trend positive" v-if="analytics.today_vs_yesterday > 0">
-                <i class="fas fa-arrow-up"></i> {{ analytics.today_vs_yesterday }}% from yesterday
-              </span>
-              <span class="trend negative" v-else-if="analytics.today_vs_yesterday < 0">
-                <i class="fas fa-arrow-down"></i> {{ Math.abs(analytics.today_vs_yesterday) }}% from yesterday
-              </span>
-              <span class="trend" v-else>
-                <i class="fas fa-equals"></i> Same as yesterday
-              </span>
+    <div v-else>
+      <!-- Summary Cards -->
+      <div class="row mb-4">
+        <div class="col-md-4">
+          <div class="card bg-success text-white shadow">
+            <div class="card-body">
+              <h5 class="card-title">Today's Profit</h5>
+              <h3>₹{{ analytics.today_profit.toFixed(2) }}</h3>
             </div>
           </div>
         </div>
-
-        <div class="summary-card month-card">
-          <div class="card-icon">
-            <i class="fas fa-calendar-alt"></i>
-          </div>
-          <div class="card-content">
-            <h3>Monthly Profit</h3>
-            <div class="card-value">₹{{ (analytics.month_profit || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}</div>
-            <div class="card-footer">
-              <span class="trend positive" v-if="analytics.month_vs_last_month > 0">
-                <i class="fas fa-arrow-up"></i> {{ analytics.month_vs_last_month }}% from last month
-              </span>
-              <span class="trend negative" v-else-if="analytics.month_vs_last_month < 0">
-                <i class="fas fa-arrow-down"></i> {{ Math.abs(analytics.month_vs_last_month) }}% from last month
-              </span>
-              <span class="trend" v-else>
-                <i class="fas fa-equals"></i> Same as last month
-              </span>
+        <div class="col-md-4">
+          <div class="card bg-info text-white shadow">
+            <div class="card-body">
+              <h5 class="card-title">This Month's Profit</h5>
+              <h3>₹{{ analytics.month_profit.toFixed(2) }}</h3>
             </div>
           </div>
         </div>
-
-        <div class="summary-card average-card">
-          <div class="card-icon">
-            <i class="fas fa-chart-bar"></i>
-          </div>
-          <div class="card-content">
-            <h3>Daily Average</h3>
-            <div class="card-value">₹{{ (analytics.daily_average || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}</div>
-            <div class="card-footer">
-              <span>Based on {{ analytics.days_in_month }} days</span>
+        <div class="col-md-4">
+          <div class="card bg-primary text-white shadow">
+            <div class="card-body">
+              <h5 class="card-title">Daily Average</h5>
+              <h3>₹{{ analytics.daily_average.toFixed(2) }}</h3>
+              <small>Based on {{ analytics.days_in_month }} days</small>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Main Content Area -->
-      <div class="main-content-area">
-        <!-- Left Column -->
-        <div class="content-column">
-          <!-- Top Parking Lots -->
-          <div class="data-section">
-            <div class="section-header">
-              <h2><i class="fas fa-warehouse"></i> Top Performing Parking Lots</h2>
-              <div class="section-actions">
-                <button class="btn-view-all">View All <i class="fas fa-chevron-right"></i></button>
-              </div>
-            </div>
-            <div class="data-table-container">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th class="rank-col">Rank</th>
-                    <th class="name-col">Lot Name</th>
-                    <th class="revenue-col">Revenue</th>
-                    <th class="occupancy-col">Avg. Occupancy</th>
-                    <th class="trend-col">Trend</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(lot, index) in analytics?.top_parking_lots || []" :key="lot.lot">
-                    <td class="rank-col">
-                      <span class="rank-badge" :class="{
-                        'gold': index === 0,
-                        'silver': index === 1,
-                        'bronze': index === 2
-                      }">{{ index + 1 }}</span>
-                    </td>
-                    <td class="name-col">{{ lot.lot }}</td>
-                    <td class="revenue-col">₹{{ lot.revenue.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}</td>
-                    <td class="occupancy-col">
-                      <div class="progress-bar-container">
-                        <div class="progress-bar" :style="{width: lot.occupancy + '%'}"></div>
-                        <span>{{ lot.occupancy }}%</span>
-                      </div>
-                    </td>
-                    <td class="trend-col">
-                      <span class="trend-indicator" :class="{
-                        'up': lot.trend > 0,
-                        'down': lot.trend < 0,
-                        'neutral': lot.trend === 0
-                      }">
-                        <i class="fas" :class="{
-                          'fa-arrow-up': lot.trend > 0,
-                          'fa-arrow-down': lot.trend < 0,
-                          'fa-equals': lot.trend === 0
-                        }"></i>
-                        {{ Math.abs(lot.trend) }}%
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+      <!-- Top Parking Lots -->
+      <div class="mb-4">
+        <h4 class="text-secondary"><i class="fas fa-warehouse me-2"></i>Top Performing Parking Lots</h4>
+        <table class="table table-bordered mt-3">
+          <thead class="table-light">
+            <tr>
+              <th>#</th>
+              <th>Lot Name</th>
+              <th>Revenue (₹)</th>
+              <th>Avg. Occupancy (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(lot, index) in analytics.top_parking_lots" :key="lot.lot">
+              <td>{{ index + 1 }}</td>
+              <td>{{ lot.lot }}</td>
+              <td>₹{{ lot.revenue.toFixed(2) }}</td>
+              <td>{{ lot.occupancy.toFixed(2) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Top Performing Users -->
+      <div>
+        <h4 class="text-secondary"><i class="fas fa-user me-2"></i>Top Performing Users</h4>
+        <table class="table table-bordered mt-3">
+          <thead class="table-light">
+            <tr>
+              <th>#</th>
+              <th>User Name</th>
+              <th>Email</th>
+              <th>Total Profit (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(user, index) in analytics.top_users" :key="user.user_id">
+              <td>{{ index + 1 }}</td>
+              <td>{{ user.name }}</td>
+              <td>{{ user.email }}</td>
+              <td>₹{{ user.total_spent.toFixed(2) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Quick Stats -->
+      <div class="row mt-5">
+        <div class="col-md-4 ">
+          <div class="card bg-light text-dark shadow">
+            <div class="card-body">
+              <h5 class="card-title">Total Vehicles</h5>
+              <h3>{{ analytics.total_vehicles }}</h3>
             </div>
           </div>
         </div>
-
-        <!-- Right Column -->
-        <div class="content-column">
-          <!-- Top Earning Spots -->
-          <div class="data-section">
-            <div class="section-header">
-              <h2><i class="fas fa-parking"></i> Top Performing Spots</h2>
-              <div class="section-actions">
-                <button class="btn-view-all">View All <i class="fas fa-chevron-right"></i></button>
-              </div>
-            </div>
-            <div class="data-table-container">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th class="rank-col">Rank</th>
-                    <th class="spot-col">Spot ID</th>
-                    <th class="lot-col">Lot</th>
-                    <th class="revenue-col">Revenue</th>
-                    <th class="utilization-col">Utilization</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(spot, index) in analytics?.top_spots || []" :key="spot.spot_id">
-                    <td class="rank-col">
-                      <span class="rank-badge" :class="{
-                        'gold': index === 0,
-                        'silver': index === 1,
-                        'bronze': index === 2
-                      }">{{ index + 1 }}</span>
-                    </td>
-                    <td class="spot-col">SP-{{ spot.spot_id }}</td>
-                    <td class="lot-col">{{ spot.lot_id }}</td>
-                    <td class="revenue-col">₹{{ spot.revenue.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}</td>
-                    <td class="utilization-col">
-                      <div class="sparkline">
-                        <span v-for="(value, i) in spot.utilization" :key="i" 
-                          class="sparkline-bar" 
-                          :style="{height: value + '%'}"
-                          :class="{
-                            'peak': value > 70,
-                            'average': value > 30 && value <= 70,
-                            'low': value <= 30
-                          }"></span>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+        <div class="col-md-4">
+          <div class="card bg-light text-dark shadow">
+            <div class="card-body">
+              <h5 class="card-title">Avg. Duration</h5>
+              <h3>{{ analytics.avg_duration }}</h3>
             </div>
           </div>
-
-          <!-- Quick Stats -->
-          <div class="quick-stats">
-            <div class="stat-card">
-              <div class="stat-icon">
-                <i class="fas fa-car"></i>
-              </div>
-              <div class="stat-content">
-                <h4>Total Vehicles</h4>
-                <div class="stat-value">{{ analytics.total_vehicles || 0 }}</div>
-              </div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-icon">
-                <i class="fas fa-clock"></i>
-              </div>
-              <div class="stat-content">
-                <h4>Avg. Duration</h4>
-                <div class="stat-value">{{ analytics.avg_duration || '0h 0m' }}</div>
-              </div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-icon">
-                <i class="fas fa-percentage"></i>
-              </div>
-              <div class="stat-content">
-                <h4>Overall Occupancy</h4>
-                <div class="stat-value">{{ analytics.overall_occupancy || 0 }}%</div>
-              </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card bg-light text-dark shadow">
+            <div class="card-body">
+              <h5 class="card-title">Overall Occupancy</h5>
+              <h3>{{ analytics.overall_occupancy.toFixed(2) }}%</h3>
             </div>
           </div>
         </div>
       </div>
     </div>
-    <!-- Profit Breakdown -->
-<div class="breakdown-section">
-  <h2 class="text-primary mb-3"><i class="fas fa-chart-pie me-2"></i>Profit Breakdown</h2>
-  <div class="row">
-    <!-- Today's Breakdown -->
-    <div class="col-md-6 mb-4">
-      <div class="card shadow-sm">
-        <div class="card-body">
-          <h5 class="card-title text-success"><i class="fas fa-calendar-day me-2"></i>Today</h5>
-          <ul class="list-group list-group-flush">
-            <li class="list-group-item"><strong>Completed Bookings:</strong> {{ analytics.breakdown.today.bookings }}</li>
-            <li class="list-group-item"><strong>Average Cost:</strong> ₹{{ analytics.breakdown.today.avg_cost.toFixed(2) }}</li>
-            <li class="list-group-item"><strong>Top Earning Lot:</strong> {{ analytics.breakdown.today.top_lot }} (₹{{ analytics.breakdown.today.top_cost.toFixed(2) }})</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-
-    <!-- Monthly Breakdown -->
-    <div class="col-md-6 mb-4">
-      <div class="card shadow-sm">
-        <div class="card-body">
-          <h5 class="card-title text-info"><i class="fas fa-calendar-alt me-2"></i>This Month</h5>
-          <ul class="list-group list-group-flush">
-            <li class="list-group-item"><strong>Completed Bookings:</strong> {{ analytics.breakdown.month.bookings }}</li>
-            <li class="list-group-item"><strong>Average Cost:</strong> ₹{{ analytics.breakdown.month.avg_cost.toFixed(2) }}</li>
-            <li class="list-group-item"><strong>Top Earning Lot:</strong> {{ analytics.breakdown.month.top_lot }} (₹{{ analytics.breakdown.month.top_cost.toFixed(2) }})</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
   </div>
   `,
 
- data() {
+  data() {
     return {
       analytics: null,
       loading: true
@@ -293,5 +141,3 @@ export default {
     this.fetchAnalytics();
   }
 };
-
-
