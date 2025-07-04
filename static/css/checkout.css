@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 _________________________________________________________________
 
@@ -294,4 +295,302 @@ _________________________________________________________________
   font-size: 0.85rem;
   color: #777;
   margin-top: 0.25rem;
+=======
+
+_________________________________________________________________
+
+.payment-desktop-page {
+  background-color: #fef6f6;
+  min-height: 100vh;
+  padding: 2rem;
+  font-family: 'Nunito', sans-serif;
+}
+
+.payment-desktop-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(255, 105, 140, 0.1);
+  overflow: hidden;
+  padding: 2rem;
+}
+
+.cute-desktop-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.desktop-parking-icon {
+  width: 100px;
+  height: 100px;
+  margin-bottom: 1rem;
+  filter: drop-shadow(0 4px 6px rgba(255, 105, 140, 0.2));
+}
+
+.desktop-title {
+  color: #ff6b8b;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  font-size: 2rem;
+}
+
+.desktop-divider {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 1rem;
+}
+
+.desktop-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #ffb6c1;
+}
+
+.desktop-content-area {
+  display: flex;
+  gap: 2rem;
+}
+
+.desktop-left-column {
+  flex: 1;
+}
+
+.desktop-right-column {
+  width: 350px;
+}
+
+.desktop-details-card, .desktop-summary-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(255, 105, 140, 0.1);
+  margin-bottom: 1.5rem;
+  padding: 1.5rem;
+  border: 1px solid #ffebee;
+}
+
+.desktop-card-title {
+  color: #ff6b8b;
+  font-size: 1.2rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.desktop-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.desktop-detail-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem;
+  border-radius: 12px;
+  background-color: #fff9fa;
+  gap: 0.75rem;
+}
+
+.desktop-emoji {
+  font-size: 1.5rem;
+}
+
+.desktop-label {
+  font-size: 0.8rem;
+  color: #888;
+  margin-bottom: 0.25rem;
+}
+
+.desktop-value {
+  font-weight: 600;
+  color: #555;
+}
+
+.vehicle-number {
+  background-color: #f0f8ff;
+  color: #4682b4;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  display: inline-block;
+}
+
+.spot-id {
+  background-color: #ffebee;
+  color: #ff6b8b;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  display: inline-block;
+}
+
+.desktop-time-display {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 1.5rem 0;
+  gap: 1rem;
+}
+
+.desktop-time-box {
+  background-color: #fff;
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+  flex: 1;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border: 1px solid #ffebee;
+}
+
+.desktop-time-emoji {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.desktop-time-label {
+  font-size: 0.8rem;
+  color: #888;
+  margin-bottom: 0.25rem;
+}
+
+.desktop-time-value {
+  font-weight: 600;
+  color: #555;
+}
+
+.desktop-duration-arrow {
+  font-size: 1.5rem;
+  color: #ff6b8b;
+}
+
+.desktop-duration {
+  background-color: #ff6b8b;
+  color: white;
+  padding: 0.75rem;
+  border-radius: 12px;
+  text-align: center;
+  font-weight: 600;
+  margin: 1rem 0;
+}
+
+.desktop-duration i {
+  margin-right: 0.5rem;
+}
+
+.desktop-price-breakdown {
+  margin: 1.5rem 0;
+}
+
+.desktop-price-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  border-bottom: 1px dashed #ffebee;
+}
+
+.desktop-price-row.total {
+  border-top: 1px solid #ffebee;
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.desktop-pay-button {
+  background: linear-gradient(135deg, #ff6082 0%, #ff7b8d 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 1rem;
+  font-weight: 700;
+  font-size: 1.1rem;
+  width: 100%;
+  margin: 1.5rem 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(255, 107, 140, 0.3);
+  transition: all 0.3s ease;
+}
+
+.desktop-pay-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(255, 107, 140, 0.4);
+}
+
+.desktop-pay-button i {
+  margin-right: 0.5rem;
+}
+
+.desktop-bouncing-arrow {
+  margin-left: 0.5rem;
+  animation: bounce 1s infinite alternate;
+}
+
+.desktop-security {
+  text-align: center;
+  color: #888;
+  font-size: 0.8rem;
+  margin-top: 1rem;
+}
+
+.desktop-security i {
+  color: #4CAF50;
+  margin-right: 0.3rem;
+}
+
+.desktop-footer {
+  text-align: center;
+  margin-top: 2rem;
+  color: #888;
+  padding-top: 1rem;
+  border-top: 1px dashed #ffebee;
+}
+
+.desktop-footer-emojis {
+  margin-top: 0.5rem;
+  font-size: 1.5rem;
+}
+
+.desktop-footer-emojis span {
+  margin: 0 0.5rem;
+  display: inline-block;
+  animation: float 3s ease-in-out infinite;
+}
+
+.desktop-footer-emojis span:nth-child(2) {
+  animation-delay: 0.5s;
+}
+
+.desktop-footer-emojis span:nth-child(3) {
+  animation-delay: 1s;
+}
+
+@keyframes bounce {
+  from { transform: translateX(0); }
+  to { transform: translateX(5px); }
+}
+
+@keyframes float {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+  100% { transform: translateY(0); }
+}
+
+.desktop-time-value {
+  font-weight: 600;
+  color: #555;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.time-small {
+  font-size: 0.85rem;
+  color: #777;
+  margin-top: 0.25rem;
+>>>>>>> cac058d (export backend done)
 }
