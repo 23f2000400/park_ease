@@ -2,7 +2,7 @@ import uuid
 
 from flask_login import logout_user
 
-from application.task import csv_report
+from application.task import csv_report, monthly_report
 from .database import db
 from flask import current_app as app, jsonify, render_template, request, send_from_directory
 from flask_security import login_required, auth_required, roles_required, current_user, hash_password, login_user as slogin_user
@@ -132,3 +132,10 @@ def export_csv():
 def csv_result(id):
     result = AsyncResult(id)
     return send_from_directory('static', result.result) 
+
+@app.route('/api/mail')
+def send_reports():
+    res = monthly_report.delay()
+    return jsonify({
+        "result": res.result,
+    })

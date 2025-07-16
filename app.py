@@ -10,6 +10,9 @@ from application.config import LocalDevelopmentConfig
 import uuid
 import sqlalchemy.exc
 from application.celery_init import celery_init_app
+from celery.schedules import crontab
+
+from application.task import monthly_report
 
 
 def create_app():
@@ -32,6 +35,7 @@ def create_app():
 
 app = create_app()
 celery = celery_init_app(app)
+celery.autodiscover_tasks()
 
 with app.app_context():
     # Create all database tables
@@ -85,6 +89,22 @@ with app.app_context():
 
 
 from application.routes import *
+
+@celery.on_after_finalize.connect
+def setup_periodic_tasks(sender, **kwargs):
+    # Schedule the monthly report task to run on the first day of every month at 00:00
+    sender.add_periodic_task(
+        # crontab(hour=7, minute=0, day_of_month='1'),
+        crontab(minute = '*/2'),
+        monthly_report.s(),
+    )
+
+    # Schedule the CSV report task to run every day at 00:00
+    # sender.add_periodic_task(
+    #     crontab(hour=0, minute=0),
+    #     csv_report.s(),
+    #     name='daily_csv_report_task'
+    # )
 
 if __name__ == '__main__':
     app.run(debug=True)

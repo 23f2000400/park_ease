@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Monthly Parking Activity Report</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f6f9fc;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background-color: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+    h2 {
+      color: #333333;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #eeeeee;
+    }
+    th {
+      background-color: #f0f0f0;
+      color: #444444;
+    }
+    .footer {
+      margin-top: 20px;
+      font-size: 12px;
+      color: #999999;
+      text-align: center;
+    }
+    .highlight {
+      color: #007bff;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Monthly Report - {{ now.strftime('%B %Y') }}</h2>
+
+    <p>Hello <strong>{{ username }}</strong>,</p>
+    <p>Here’s your parking activity summary for this month:</p>
+
+    <table>
+      <tr>
+        <th>Total Bookings</th>
+        <td class="highlight">{{ user_booking | length }}</td>
+      </tr>
+      <tr>
+        <th>Total Cost</th>
+        <td class="highlight">₹{{ user_booking | sum(attribute='cost') | round(2) }}</td>
+      </tr>
+      <tr>
+        <th>Average Booking Duration</th>
+        <td>{{ avg_duration }}</td>
+      </tr>
+    </table>
+
+    {% if user_booking %}
+    <h3 style="margin-top: 30px;">📄 Booking Details</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Reservation ID</th>
+          <th>Spot ID</th>
+          <th>Vehicle No</th>
+          <th>Cost (₹)</th>
+          <th>Check-In</th>
+          <th>Check-Out</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for res in user_booking %}
+        <tr>
+          <td>{{ res.id }}</td>
+          <td>{{ res.spot_id }}</td>
+          <td>{{ res.vehicle_number }}</td>
+          <td>{{ res.cost }}</td>
+          <td>{{ res.check_in }}</td>
+          <td>{{ res.check_out }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    <p>Thank you for using our parking service! 🚗</p>
+
+    <div class="footer">
+      <p>&copy; {{ now.year }} ParkEase | This is an automated report.</p>
+    </div>
+  </div>
+</body>
+</html>
