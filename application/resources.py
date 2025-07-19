@@ -17,7 +17,10 @@ now = datetime.now(IST)
 
 from .models import Reservation, ParkingLot
 import random
- # Install via pip if not already: pip install python-dateutil
+
+from .extensions import cache  # ✅ Import directly
+
+
 
 
 api = Api()
@@ -44,6 +47,9 @@ class ParkingLotResource(Resource):
     def post(self):
         try:
             args = self.parser.parse_args()
+
+            if cache:
+                cache.delete('all_parking_lots')
 
             # Create a new ParkingLot instance
             new_lot = ParkingLot(
@@ -113,6 +119,8 @@ class ParkingLotResource(Resource):
             #     lots = ParkingLot.query.all()
             # else:
             #     lots = current_user.parking_lots  # User can see their own lots
+
+    @cache.cached(timeout=300, key_prefix='all_parking_lots')
     def get(self):
         try:
             city = request.args.get('city')
@@ -185,7 +193,8 @@ class ParkingLotResource(Resource):
             return {'message': 'Parking lot not found'}, 404
             
         args = self.parser.parse_args()
-        
+        if cache:
+            cache.delete('all_parking_lots')     
         try:
             # Check if we're reducing spots (only allowed if spots are available)
             if args['total_spots'] < lot.total_spots:
@@ -217,6 +226,7 @@ class ParkingLotResource(Resource):
     def delete(self, lot_id):
         """Delete a parking lot"""
         lot = ParkingLot.query.get(lot_id)
+        cache.delete('all_parking_lots')
         if not lot:
             return {'message': 'Parking lot not found'}, 404
             

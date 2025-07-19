@@ -11,8 +11,13 @@ import uuid
 import sqlalchemy.exc
 from application.celery_init import celery_init_app
 from celery.schedules import crontab
+from flask_caching import Cache
 
-from application.task import monthly_report
+from application.task import monthly_report , send_daily_reminders
+
+from application.extensions import cache  # ✅ Use this
+
+
 
 
 def create_app():
@@ -23,6 +28,9 @@ def create_app():
     # Initialize database
     db.init_app(app)
     api.init_app(app)
+    cache.init_app(app)
+
+
 
     # Initialize Flask-Security with correct User and Role models
     datastore = SQLAlchemyUserDatastore(db, User, Role)
@@ -105,6 +113,16 @@ def setup_periodic_tasks(sender, **kwargs):
     #     csv_report.s(),
     #     name='daily_csv_report_task'
     # )
+
+@celery.on_after_finalize.connect
+def setup_periodic_tasks(sender, **kwargs):
+    sender.add_periodic_task(
+        # crontab(hour=18, minute=0),  # 6:00 PM
+        crontab(minute = '*/2'),
+
+        send_daily_reminders.s()
+    )
+
 
 if __name__ == '__main__':
     app.run(debug=True)

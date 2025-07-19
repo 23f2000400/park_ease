@@ -12,3 +12,6 @@ class LocalDevelopmentConfig(Config):
     SECURITY_PASSWORD_SALT = 'this-is-my-salt'
     WTF_CSRF_ENABLED = False
     SECURITY_TOKEN_AUTHENTICATION_HEADER = 'Authentication-Token'
+
+    CACHE_TYPE = 'RedisCache'
+    CACHE_DEFAULT_TIMEOUT = 300

@@ -1,9 +1,11 @@
 import csv
 from celery import shared_task
+import pytz
 from .models import *
 import datetime
 from .utils import format_report
 from .mail import send_email
+import requests
 # from .mail import send_email, format_report
 
 @shared_task(ignore_results=False, name='download_csv_report')
@@ -87,3 +89,33 @@ def monthly_report():
 def daily_report():
     # Placeholder: implement logic as needed
     return "Daily report generated."
+
+@shared_task(ignore_results=False, name='send_daily_reminders')
+def send_daily_reminders():
+    ist = pytz.timezone('Asia/Kolkata')
+    now = datetime.datetime.now(ist)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    users = User.query.all()
+    sent_count = 0  # Optional: to track how many were sent
+
+    for user in users:
+        # Check if user made a reservation today
+        recent_res = Reservation.query.filter(
+            Reservation.user_id == user.id,
+            Reservation.check_in >= today_start,
+            Reservation.status == 'completed'
+        ).first()
+
+        if not recent_res:
+            # They didn’t park today → send reminder
+            text = f"Hi {user.name}, don't forget to book your parking for tomorrow! 🚗"
+            response = requests.post(
+                'https://chat.googleapis.com/v1/spaces/AAQA1J7EJps/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=DeXkNkC0cGeXBDze89n-oeJy_DfxMrKbUQq027xKfHY',
+                headers = {'Content-type':'application/json'},
+                json={'text': text}
+            )
+            print(f"Sent to {user.email}: {response.status_code}")
+            sent_count += 1  # Optional tracking
+
+    return f"Sent reminders to {sent_count} users"
