@@ -309,10 +309,10 @@ export default {
     },
 
     navigateToBookingHistory() {
-      this.$router.push('/user/bookings-history');
+      this.$router.push('/user/bookings');
     },
     navigateToFindParking() {
-      this.$router.push('/find-parking');
+      this.$router.push('/user/find-parking');
     },
     navigateToPaymentMethods() {
       this.$router.push('/payment-methods');

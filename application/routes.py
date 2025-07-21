@@ -16,6 +16,12 @@ def index():
     """Home route."""
     return render_template('index.html')
 
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def catch_all(path):
+    return render_template('index.html')  # Ensure Vue's index.html is served
+
+
 @app.route('/admin')
 @auth_required('token')  # Ensure only admin can access this route
 @roles_required('admin')

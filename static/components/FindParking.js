@@ -191,7 +191,7 @@ export default {
       const lot = this.parkingLots.find(l => l.id === this.bookingSpot.lotId);
 
       this.$router.push({
-        path: '/payment',
+        path: '/user/payment',
         query: {
           spot_id: this.bookingSpot.spotId,
           vehicle_number: this.bookingForm.vehicleNumber,
