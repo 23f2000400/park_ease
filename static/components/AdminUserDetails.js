@@ -22,6 +22,15 @@ export default {
             <span class="badge" :class="user.active ? 'bg-success' : 'bg-danger'">
               {{ user.active ? 'Active' : 'Inactive' }}
             </span>
+            <div class="mt-3">
+              <button class="btn btn-danger me-2" @click="confirmDelete">
+                <i class="fas fa-trash-alt me-1"></i> Delete User
+              </button>
+              <button class="btn btn-warning" @click="confirmBlock">
+                <i class="fas fa-ban me-1"></i> {{ user.active ? 'Block User' : 'Unblock User' }}
+              </button>
+            </div>
+
           </p>
         </div>
       </div>
@@ -107,7 +116,65 @@ export default {
     },
     formatDateTime(date) {
       return new Date(date).toLocaleString();
+    },
+    confirmDelete() {
+  if (confirm("Are you sure you want to permanently delete this user?")) {
+    this.deleteUser();
+  }
+},
+
+confirmBlock() {
+  const action = this.user.active ? "block" : "unblock";
+  if (confirm(`Are you sure you want to ${action} this user?`)) {
+    this.toggleBlock();
+  }
+},
+
+async deleteUser() {
+  try {
+    const token = localStorage.getItem('auth_token');
+    const res = await fetch(`/api/admin/users/${this.user.id}`, {
+      method: 'DELETE',
+      headers: { 'Authentication-Token': token }
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      alert(data.message || "User deleted");
+      this.$router.push('/admin/home');
+    } else {
+      alert(data.message || "Failed to delete user");
     }
+  } catch (err) {
+    console.error(err);
+    alert("Error deleting user");
+  }
+},
+
+async toggleBlock() {
+  try {
+    const token = localStorage.getItem('auth_token');
+    const res = await fetch(`/api/admin/users/${this.user.id}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authentication-Token': token
+      },
+      body: JSON.stringify({ active: !this.user.active })
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      this.user.active = data.active;
+    } else {
+      alert(data.message || "Failed to update status");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Error updating user status");
+  }
+}
+
   },
   mounted() {
     this.fetchUserDetails();

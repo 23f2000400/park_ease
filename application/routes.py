@@ -78,19 +78,22 @@ def login_user():
     user = app.security.datastore.find_user(email=email)
     if not user:
         return jsonify({"message": "User not found"}), 404
-    if user:
-        if check_password_hash(user.password, password):
-            # if current_user:
-            #     return jsonify({"message": "Already logged in"}), 400
-            slogin_user(user)
-            return jsonify({"id":user.id,
-                            "username": user.username,
-                            "auth-token":user.get_auth_token(),
-                            "name":user.name,
-                                "roles": [role.name for role in user.roles]  # Return a list of roles
-                }), 200
-        else:
-            return jsonify({"message": "Invalid password"}), 401
+
+    if not user.active:
+        return jsonify({"message": "You are blocked by admin"}), 403 
+
+    if check_password_hash(user.password, password):
+        slogin_user(user)
+        return jsonify({
+            "id": user.id,
+            "username": user.username,
+            "auth-token": user.get_auth_token(),
+            "name": user.name,
+            "roles": [role.name for role in user.roles]
+        }), 200
+    else:
+        return jsonify({"message": "Invalid password"}), 401
+
         
 
 @app.route('/api/logout', methods=['POST'])
@@ -116,6 +119,8 @@ def get_user_info():
         "roles": [role.name for role in user.roles],  # Return a list of roles
         "active": user.active
     }), 200
+
+    
 @app.route('/api/admin/home', methods=['GET'])
 @auth_required('token')
 @roles_required('admin')

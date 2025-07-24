@@ -733,6 +733,34 @@ class AdminUserDetail(Resource):
             "created_at": user.created_at.isoformat(),
 
         }
+    
+    @auth_required('token')
+    @roles_required('admin')
+    def delete(self, user_id):
+        user = User.query.get_or_404(user_id)
+        if user.has_role('admin'):
+            return {'message': 'Cannot delete admin users'}, 403
+
+        db.session.delete(user)
+        db.session.commit()
+        return {'message': 'User deleted successfully'}, 200
+    
+#for blocking the users    
+class AdminUserStatus(Resource):
+    @auth_required('token')
+    @roles_required('admin')
+    def put(self, user_id):
+        data = request.get_json()
+        user = User.query.get_or_404(user_id)
+        
+        if user.has_role('admin'):
+            return {'message': 'Cannot modify admin status'}, 403
+
+        user.active = data.get('active', True)
+        db.session.commit()
+        return {'message': 'User status updated', 'active': user.active}, 200
+
+
 
         
 
@@ -1050,3 +1078,4 @@ api.add_resource(AdminReservationHistoryResource, '/api/admin/reservations')
 api.add_resource(AdminUserBookings, '/api/admin/users/<int:user_id>/bookings')
 api.add_resource(AdminProfitAnalytics, '/api/admin/profit-analytics')
 api.add_resource(AdminSummary, '/api/admin/summary')
+api.add_resource(AdminUserStatus, '/api/admin/users/<int:user_id>/status')
