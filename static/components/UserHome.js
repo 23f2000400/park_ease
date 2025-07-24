@@ -205,7 +205,7 @@ export default {
       error: null,
       showSpotOModal: false,
       selectedBooking: null,
-      showRefundModal: false,         // 👈 for refund modal
+      showRefundModal: false,      
       refundInfo: { amount: 0 }   
     };
   },

@@ -11,8 +11,6 @@ from sqlalchemy import func, case ,desc
 from datetime import datetime, timedelta, timezone
 import pytz
 import calendar
-from pytz import timezone
-
 
 IST = pytz.timezone("Asia/Kolkata")
 now = datetime.now(IST)
@@ -50,8 +48,6 @@ class ParkingLotResource(Resource):
         try:
             args = self.parser.parse_args()
 
-            if cache:
-                cache.delete('all_parking_lots')
 
             # Create a new ParkingLot instance
             new_lot = ParkingLot(
@@ -92,6 +88,35 @@ class ParkingLotResource(Resource):
             db.session.rollback()
             return {'error': str(e)}, 400
 
+
+    # @auth_required('token')
+    # def get(self, lot_id=None):
+    #     """Get parking lot(s)"""
+    #     if lot_id:
+    #         lot = ParkingLot.query.get(lot_id)
+    #         if not lot:
+    #             return {'message': 'Parking lot not found'}, 404
+                
+    #         return jsonify({
+    #             'id': lot.id,
+    #             'name': lot.name,
+    #             'area': lot.area,
+    #             'address': lot.address,
+    #             'pincode': lot.pincode,
+    #             'price': lot.price,
+    #             'total_spots': lot.total_spots,
+    #             'available_spots': lot.spots.filter_by(status='A').count(),
+    #         })
+    #     else:
+            # Get all parking lots with availability info
+
+            # lots = []
+            # result = []
+            # if 'admin' in roles_list(current_user.roles):
+            #     # Admin can see all lots
+            #     lots = ParkingLot.query.all()
+            # else:
+            #     lots = current_user.parking_lots  # User can see their own lots
 
     def get(self):
         try:
@@ -165,8 +190,7 @@ class ParkingLotResource(Resource):
             return {'message': 'Parking lot not found'}, 404
             
         args = self.parser.parse_args()
-        if cache:
-            cache.delete('all_parking_lots')     
+ 
         try:
             # Check if we're reducing spots (only allowed if spots are available)
             if args['total_spots'] < lot.total_spots:
@@ -263,7 +287,6 @@ class ReservationResource(Resource):
     parser.add_argument('check_in', type=str, required=False)
     parser.add_argument('check_out', type=str, required=False)
 
-
     @auth_required('token')
     @roles_required('user')
     def post(self):
@@ -278,23 +301,15 @@ class ReservationResource(Resource):
             return {'message': 'Spot is already occupied'}, 400
 
         try:
-            # Default to now (IST)
+            # Use Indian Standard Time instead of UTC
             check_in_time = datetime.now(IST)
 
             if args.get('check_in'):
-                check_in_time = datetime.fromisoformat(args['check_in'])
-                if check_in_time.tzinfo is None:
-                    check_in_time = IST.localize(check_in_time)
-                else:
-                    check_in_time = check_in_time.astimezone(IST)
+                check_in_time = datetime.fromisoformat(args['check_in']).astimezone(IST)
 
             check_out_time = None
             if args.get('check_out'):
-                check_out_time = datetime.fromisoformat(args['check_out'])
-                if check_out_time.tzinfo is None:
-                    check_out_time = IST.localize(check_out_time)
-                else:
-                    check_out_time = check_out_time.astimezone(IST)
+                check_out_time = datetime.fromisoformat(args['check_out']).astimezone(IST)
 
             cost = 0.0
             if check_out_time and check_out_time > check_in_time:
@@ -1020,6 +1035,3 @@ api.add_resource(AdminReservationHistoryResource, '/api/admin/reservations')
 api.add_resource(AdminUserBookings, '/api/admin/users/<int:user_id>/bookings')
 api.add_resource(AdminProfitAnalytics, '/api/admin/profit-analytics')
 api.add_resource(AdminSummary, '/api/admin/summary')
-
-
-

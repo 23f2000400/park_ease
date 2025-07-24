@@ -83,13 +83,6 @@ def monthly_report():
     return "Monthly report sent."
 
 
-
-
-@shared_task(ignore_results=False, name='daily_report')
-def daily_report():
-    # Placeholder: implement logic as needed
-    return "Daily report generated."
-
 @shared_task(ignore_results=False, name='send_daily_reminders')
 def send_daily_reminders():
     ist = pytz.timezone('Asia/Kolkata')
