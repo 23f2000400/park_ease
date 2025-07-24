@@ -43,7 +43,12 @@ def user_dashboard():
 @app.route('/api/register', methods=['POST'])
 def register_user():
     credentials = request.get_json()
-    if not app.security.datastore.find_user(email=credentials['email']) or not app.security.datastore.find_user(username=credentials['username']):
+    if app.security.datastore.find_user(email=credentials['email']) :
+        return jsonify ({ "message": "Email already exists"}), 400
+    elif app.security.datastore.find_user(username=credentials['username']):
+        return jsonify ({ "message": "Username already exists"}), 400
+    
+    elif not app.security.datastore.find_user(email=credentials['email']) or not app.security.datastore.find_user(username=credentials['username']):
             app.security.datastore.create_user(
                 email= credentials['email'],
                 name= credentials['name'], 
@@ -60,7 +65,7 @@ def register_user():
         return jsonify({"message": "User already exists"}), 400
 
 @app.route('/api/login', methods=['POST'])
-def login_user():
+def login_user():    
     credentials = request.get_json()
     email = credentials['email']
     password = credentials['password']

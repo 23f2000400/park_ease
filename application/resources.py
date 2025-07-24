@@ -19,6 +19,8 @@ from .models import Reservation, ParkingLot
 import random
 
 from .extensions import cache  # ✅ Import directly
+from werkzeug.security import generate_password_hash, check_password_hash
+
 
 
 
@@ -29,7 +31,6 @@ def roles_list(roles):
     return [role.name for role in roles]
 
 class ParkingLotResource(Resource):
-    # Common parser for request data
     parser = reqparse.RequestParser()
     parser.add_argument('id', type=int, required=False, help='Parking lot ID is optional for updates')
     parser.add_argument('name', type=str, required=True, help='Parking lot name is required')
@@ -88,35 +89,6 @@ class ParkingLotResource(Resource):
             db.session.rollback()
             return {'error': str(e)}, 400
 
-
-    # @auth_required('token')
-    # def get(self, lot_id=None):
-    #     """Get parking lot(s)"""
-    #     if lot_id:
-    #         lot = ParkingLot.query.get(lot_id)
-    #         if not lot:
-    #             return {'message': 'Parking lot not found'}, 404
-                
-    #         return jsonify({
-    #             'id': lot.id,
-    #             'name': lot.name,
-    #             'area': lot.area,
-    #             'address': lot.address,
-    #             'pincode': lot.pincode,
-    #             'price': lot.price,
-    #             'total_spots': lot.total_spots,
-    #             'available_spots': lot.spots.filter_by(status='A').count(),
-    #         })
-    #     else:
-            # Get all parking lots with availability info
-
-            # lots = []
-            # result = []
-            # if 'admin' in roles_list(current_user.roles):
-            #     # Admin can see all lots
-            #     lots = ParkingLot.query.all()
-            # else:
-            #     lots = current_user.parking_lots  # User can see their own lots
 
     def get(self):
         try:
@@ -646,6 +618,38 @@ class UserProfileResource(Resource):
         ).first()
         
         return favorite[0] if favorite else None
+    
+
+
+    @auth_required('token')
+    def put(self):
+        data = request.get_json()
+        
+        # Email uniqueness check
+        if 'email' in data:
+            existing_user = User.query.filter_by(email=data['email']).first()
+            if existing_user and existing_user.id != current_user.id:
+                return {'message': 'Email already in use'}, 400
+            
+        if 'username' in data:
+            existing_user = User.query.filter_by(username=data['username']).first()
+            if existing_user and existing_user.id != current_user.id:
+                return {'message': 'Username already in use'}, 400
+
+        # Profile field updates
+        current_user.name = data.get('name', current_user.name)
+        current_user.username = data.get('username', current_user.username)
+        current_user.email = data.get('email', current_user.email)
+        current_user.phone = data.get('phone', current_user.phone)
+
+        # Secure password update
+        if 'password' in data and data['password']:
+            current_user.password = generate_password_hash(data['password'])
+
+        db.session.commit()
+        return {'message': 'Profile updated successfully'}
+
+
 
 class AdminProfileResource(Resource):
     @auth_required('token')

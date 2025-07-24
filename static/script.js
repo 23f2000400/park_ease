@@ -11,6 +11,8 @@ import AdminHome from './components/AdminHome.js';
 import AdminUserDetails from './components/AdminUserDetails.js';
 import AdminSummary from './components/AdminSummary.js';
 import AdminProfit from './components/AdminProfit.js';
+import EditProfile from './components/EditProfile.js';
+import UserProfile from './components/UserProfile.js';
 
 export const auth = Vue.observable({
   isAuthenticated: !!localStorage.getItem('auth_token'),
@@ -33,7 +35,9 @@ const routes = [
   { path: '/admin/home', component: AdminHome, meta: { requiresAuth: true, role: 'admin' } },
   { path: '/admin/user/:id', component: AdminUserDetails, meta: { requiresAuth: true, role: 'admin' } },
   { path: '/admin/summary', component: AdminSummary, meta: { requiresAuth: true, role: 'admin' } },
-  { path: '/admin/profit-analytics', component: AdminProfit, meta: { requiresAuth: true, role: 'admin' } }
+  { path: '/admin/profit-analytics', component: AdminProfit, meta: { requiresAuth: true, role: 'admin' } },
+  { path: '/user/profile', component: UserProfile, meta: { requiresAuth: true, role: 'user' } },
+  { path: '/user/edit-profile', component: EditProfile, meta: { requiresAuth: true, role: 'user' } }
 ];
 
 const router = new VueRouter({
@@ -55,6 +59,9 @@ router.beforeEach((to, from, next) => {
       alert('Access Denied: You are not authorized to view this page.');
       return next('/');
     }
+  }
+  if ((to.path === '/login' || to.path === '/register') && token) {
+    return next('/user/home');
   }
 
   next();
