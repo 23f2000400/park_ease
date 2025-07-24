@@ -9,6 +9,8 @@ from flask_security import login_required, auth_required, roles_required, curren
 from flask import jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from celery.result import AsyncResult
+from flask_security.utils import verify_password
+
 
 
 @app.route('/', methods=['GET'])
@@ -36,7 +38,8 @@ def admin_dashboard():
 def user_dashboard():
     """User dashboard route."""
     return jsonify({"name": current_user.name, "email": current_user.email, "phone": current_user.phone}), 200
- 
+
+
 @app.route('/api/register', methods=['POST'])
 def register_user():
     credentials = request.get_json()
@@ -84,6 +87,7 @@ def login_user():
         else:
             return jsonify({"message": "Invalid password"}), 401
         
+
 @app.route('/api/logout', methods=['POST'])
 def logout():
     logout_user()
