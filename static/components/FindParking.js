@@ -177,14 +177,31 @@ export default {
       this.showBookingModal = true;
     },
 
-    proceedToPayment() {
+ proceedToPayment() {
       if (!this.bookingForm.vehicleNumber || !this.bookingForm.scheduledCheckOut) {
         return alert('Please complete all fields.');
       }
       if (this.bookingForm.mode === 'schedule' && !this.bookingForm.scheduledCheckIn) {
         return alert('Please select check-in time.');
       }
-      if (new Date(this.checkInTime) >= new Date(this.bookingForm.scheduledCheckOut)) {
+
+      // Format datetime for backend (convert to ISO string with timezone)
+      const formatForBackend = (dateString) => {
+        if (!dateString) return null;
+        const date = new Date(dateString);
+        // Convert to ISO string with timezone offset
+        return date.toISOString();
+      };
+
+      // For "Book Now", use current time in ISO format
+      const checkIn = this.bookingForm.mode === 'schedule'
+        ? formatForBackend(this.bookingForm.scheduledCheckIn + ':00') // Add seconds if missing
+        : new Date().toISOString();
+      const checkOut = formatForBackend(this.bookingForm.scheduledCheckOut + ':00');
+
+
+      // Validate times
+      if (new Date(checkIn) >= new Date(checkOut)) {
         return alert('Check-out must be after check-in.');
       }
 
@@ -195,8 +212,8 @@ export default {
         query: {
           spot_id: this.bookingSpot.spotId,
           vehicle_number: this.bookingForm.vehicleNumber,
-          check_in: this.checkInTime,
-          check_out: this.bookingForm.scheduledCheckOut,
+          check_in: checkIn,
+          check_out: checkOut,
           cost: this.estimatedCost,
           lot_name: this.bookingSpot.lotName,
           area: lot?.area || '',

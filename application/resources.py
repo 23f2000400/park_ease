@@ -279,6 +279,9 @@ class ParkingSpotResource(Resource):
             db.session.rollback()
             return {'message': f'Failed to delete spot: {str(e)}'}, 500
         
+from dateutil import parser
+
+        
 class ReservationResource(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('spot_id', type=int, required=True)
@@ -290,7 +293,6 @@ class ReservationResource(Resource):
     @auth_required('token')
     @roles_required('user')
     def post(self):
-        """Create a new reservation"""
         args = self.parser.parse_args()
         spot = ParkingSpot.query.get(args['spot_id'])
 
@@ -301,21 +303,31 @@ class ReservationResource(Resource):
             return {'message': 'Spot is already occupied'}, 400
 
         try:
-            # Use Indian Standard Time instead of UTC
-            check_in_time = datetime.now(IST)
-
+            IST = pytz.timezone('Asia/Kolkata')
+            
+            # Handle check-in time
             if args.get('check_in'):
-                check_in_time = datetime.fromisoformat(args['check_in']).astimezone(IST)
+                # Parse as local time and convert to IST
+                check_in_time = parser.parse(args['check_in']).astimezone(IST)
+            else:
+                # Current time in IST
+                check_in_time = datetime.now(IST)
 
+            # Handle check-out time
             check_out_time = None
             if args.get('check_out'):
-                check_out_time = datetime.fromisoformat(args['check_out']).astimezone(IST)
+                # Parse as local time and convert to IST
+                check_out_time = parser.parse(args['check_out']).astimezone(IST)
+                if check_out_time <= check_in_time:
+                    return {'message': 'Check-out must be after check-in'}, 400
 
+            # Calculate cost
             cost = 0.0
-            if check_out_time and check_out_time > check_in_time:
+            if check_out_time:
                 delta_hours = math.ceil((check_out_time - check_in_time).total_seconds() / 3600)
                 cost = spot.lot.price * delta_hours
 
+            # Create reservation
             reservation = Reservation(
                 user_id=current_user.id,
                 spot_id=spot.id,
@@ -340,7 +352,6 @@ class ReservationResource(Resource):
         except Exception as e:
             db.session.rollback()
             return {'message': str(e)}, 400
-
     @auth_required('token')
     def put(self, reservation_id):
         reservation = Reservation.query.get(reservation_id)
