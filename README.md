@@ -12,3 +12,5 @@ git config --global user.name "23f2000400"
 remaining :-
 1. user summary
 2. block and delete user
+3. admin dashboard , active booking clickable
+4. mail

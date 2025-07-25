@@ -40,7 +40,7 @@ export default {
               <router-link class="nav-link" to="/user/home">UserHome</router-link>
             </li>
             <li class="nav-item">
-              <router-link class="nav-link" to="/user/bookings">Summary</router-link>
+              <router-link class="nav-link" to="/user/summary">Summary</router-link>
             </li>
             <li class="nav-item">
             <router-link to="/user/profile" class="nav-link">View Profile</router-link>

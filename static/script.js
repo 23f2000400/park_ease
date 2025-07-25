@@ -13,6 +13,7 @@ import AdminSummary from './components/AdminSummary.js';
 import AdminProfit from './components/AdminProfit.js';
 import EditProfile from './components/EditProfile.js';
 import UserProfile from './components/UserProfile.js';
+import UserSummary from './components/UserSummary.js';
 
 export const auth = Vue.observable({
   isAuthenticated: !!localStorage.getItem('auth_token'),
@@ -37,7 +38,8 @@ const routes = [
   { path: '/admin/summary', component: AdminSummary, meta: { requiresAuth: true, role: 'admin' } },
   { path: '/admin/profit-analytics', component: AdminProfit, meta: { requiresAuth: true, role: 'admin' } },
   { path: '/user/profile', component: UserProfile, meta: { requiresAuth: true, role: 'user' } },
-  { path: '/user/edit-profile', component: EditProfile, meta: { requiresAuth: true, role: 'user' } }
+  { path: '/user/edit-profile', component: EditProfile, meta: { requiresAuth: true, role: 'user' } },
+  { path: '/user/summary', component: UserSummary, meta: { requiresAuth: true, role: 'user' } },
 ];
 
 const router = new VueRouter({
