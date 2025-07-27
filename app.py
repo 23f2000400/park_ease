@@ -107,12 +107,7 @@ def setup_periodic_tasks(sender, **kwargs):
         monthly_report.s(),
     )
 
-    # Schedule the CSV report task to run every day at 00:00
-    # sender.add_periodic_task(
-    #     crontab(hour=0, minute=0),
-    #     csv_report.s(),
-    #     name='daily_csv_report_task'
-    # )
+
 
 @celery.on_after_finalize.connect
 def setup_periodic_tasks(sender, **kwargs):

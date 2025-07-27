@@ -33,6 +33,43 @@ def csv_report():
             sr_no += 1
     return csv_file_name
 
+@shared_task(ignore_results=False, name='export_user_bookings_csv')
+def export_user_bookings_csv(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return "User not found."
+
+    bookings = Reservation.query.filter_by(user_id=user_id).all()
+    if not bookings:
+        return "No bookings found for user."
+
+    filename = f"user_{user_id}_bookings_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+
+    with open(f'static/{filename}', 'w', newline='') as csvfile:
+        sr_no = 1
+        fieldnames = ['Reservation ID', 'Spot ID', 'Vehicle No', 'Check-in', 'Check-out', 'Cost', 'Status']
+        res_csv = csv.writer(csvfile, delimiter=',')
+        res_csv.writerow(fieldnames)
+
+        for res in bookings:
+            this_res = [
+                sr_no,
+                res.id,
+                res.spot_id,
+                res.vehicle_number,
+                res.check_in.strftime('%Y-%m-%d %H:%M:%S') if res.check_in else '',
+                res.check_out.strftime('%Y-%m-%d %H:%M:%S') if res.check_out else '',
+                float(res.cost or 0),
+                res.status
+            ]
+            res_csv.writerow(this_res)
+            sr_no += 1
+
+    return filename
+                     
+
+
+
 
 @shared_task(ignore_results=False, name='monthly_report')
 def monthly_report():

@@ -3,6 +3,12 @@ export default {
     <div class="container mt-4">
       <h2 class="text-primary mb-4"><i class="fas fa-chart-line me-2"></i>User Summary</h2>
 
+      <div class="text-end mb-3">
+  <button class="btn btn-outline-primary" @click="exportCSV">
+    <i class="fas fa-file-csv me-1"></i> Export My Parking Data
+  </button>
+</div>
+
       <div v-if="loading" class="text-center py-5">
         <div class="spinner-border text-primary"></div>
       </div>
@@ -69,6 +75,14 @@ methods: {
     }
   },
 
+      exportCSV() {
+        fetch('/api/user/export')
+        .then(response => response.json())
+        .then(data => {
+            window.location.href = `/api/user/export_result/${data.id}`;
+        })
+        .catch(error => console.error('Error exporting CSV:', error));
+    },
  renderChart(stats) {
   const canvas = document.getElementById('usageChart');
   if (!canvas) {

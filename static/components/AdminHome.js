@@ -169,7 +169,6 @@ export default {
           </div>
         </div>
 
-        <!-- Add Parking Lot Form (conditionally shown) -->
         <!-- Add Parking Lot Modal -->
         <div v-if="showAddForm" class="modal-overlay"
           style="position: fixed; top: 0; left: 0; width: 100%; height: 100%;
