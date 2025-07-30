@@ -16,9 +16,8 @@ IST = pytz.timezone("Asia/Kolkata")
 now = datetime.now(IST)
 
 from .models import Reservation, ParkingLot
-import random
 
-from .extensions import cache  # ✅ Import directly
+from .extensions import cache 
 from werkzeug.security import generate_password_hash, check_password_hash
 
 
@@ -50,7 +49,7 @@ class ParkingLotResource(Resource):
             args = self.parser.parse_args()
 
 
-            # Create a new ParkingLot instance
+            # Create a new ParkingLot
             new_lot = ParkingLot(
                 name=args['name'],
                 city=args['city'],
@@ -64,7 +63,7 @@ class ParkingLotResource(Resource):
             db.session.add(new_lot)
             db.session.commit()
 
-            # Optional: auto-generate spots if your model supports it
+            # auto-generate spots 
             if hasattr(new_lot, 'create_spots'):
                 new_lot.create_spots()
 
@@ -164,7 +163,6 @@ class ParkingLotResource(Resource):
         args = self.parser.parse_args()
  
         try:
-            # Check if we're reducing spots (only allowed if spots are available)
             if args['total_spots'] < lot.total_spots:
                 occupied_spots = lot.spots.filter_by(status='O').count()
                 if occupied_spots > args['total_spots']:
@@ -194,7 +192,6 @@ class ParkingLotResource(Resource):
     def delete(self, lot_id):
         """Delete a parking lot"""
         lot = ParkingLot.query.get(lot_id)
-        cache.delete('all_parking_lots')
         if not lot:
             return {'message': 'Parking lot not found'}, 404
             
@@ -203,7 +200,6 @@ class ParkingLotResource(Resource):
             return {'message': 'Cannot delete lot with occupied spots'}, 400
             
         try:
-            # Delete associated spots first
             ParkingSpot.query.filter_by(lot_id=lot_id).delete()
             db.session.delete(lot)
             db.session.commit()
@@ -293,7 +289,6 @@ class ReservationResource(Resource):
                 if check_out_time <= check_in_time:
                     return {'message': 'Check-out must be after check-in'}, 400
 
-            # Calculate cost
             cost = 0.0
             if check_out_time:
                 delta_hours = math.ceil((check_out_time - check_in_time).total_seconds() / 3600)
@@ -402,7 +397,7 @@ class ReservationResource(Resource):
 
             # Optional refund logic
             refund_amount = float(reservation.cost or 0.0)
-            reservation.cost = 0.0  # 🧹 Reset cost
+            reservation.cost = 0.0  
 
 
             db.session.commit()
@@ -548,7 +543,6 @@ class UserProfileResource(Resource):
     
     def get_membership_tier(self, user):
         """Determine membership tier based on user's activity"""
-        # In a real app, this would query the database for actual usage
         if user.has_role('premium'):
             return 'Premium'
         elif user.has_role('vip'):
@@ -556,9 +550,9 @@ class UserProfileResource(Resource):
         else:
             # Default tier logic based on account age
             account_age = (datetime.utcnow() - user.created_at).days
-            if account_age > 365:
+            if account_age > 60:
                 return 'Gold'
-            elif account_age > 180:
+            elif account_age > 30:
                 return 'Silver'
             else:
                 return 'Basic'
@@ -625,7 +619,6 @@ class UserProfileResource(Resource):
     def put(self):
         data = request.get_json()
         
-        # Email uniqueness check
         if 'email' in data:
             existing_user = User.query.filter_by(email=data['email']).first()
             if existing_user and existing_user.id != current_user.id:
@@ -636,13 +629,11 @@ class UserProfileResource(Resource):
             if existing_user and existing_user.id != current_user.id:
                 return {'message': 'Username already in use'}, 400
 
-        # Profile field updates
         current_user.name = data.get('name', current_user.name)
         current_user.username = data.get('username', current_user.username)
         current_user.email = data.get('email', current_user.email)
         current_user.phone = data.get('phone', current_user.phone)
 
-        # Secure password update
         if 'password' in data and data['password']:
             current_user.password = generate_password_hash(data['password'])
 
@@ -657,7 +648,6 @@ class AdminProfileResource(Resource):
     def get(self):
         """Get admin profile details"""
         try:
-            # Get the current admin's details
             user_data = {
                 'id': current_user.id,
                 'name': current_user.name,
@@ -694,7 +684,6 @@ class AdminUserProfileResource(Resource):
 
             user_list = []
             for user in users:
-                # Optional: skip those with multiple roles
                 if len(user.roles) != 1 or user.roles[0].name != 'user':
                     continue
 
@@ -787,7 +776,6 @@ class AdminUserBookings(Resource):
             })
         return result, 200
         
-# admin_resources.py
 class AdminReservationHistoryResource(Resource):
     @auth_required('token')
     @roles_required('admin')
@@ -827,6 +815,7 @@ class AdminReservationHistoryResource(Resource):
 class AdminProfitAnalytics(Resource):
     @auth_required('token')
     @roles_required('admin')
+    @cache.cached(timeout=60, key_prefix='admin_profit_analytics')
     def get(self):
         try:
             now = datetime.now(IST)
@@ -926,6 +915,8 @@ class AdminProfitAnalytics(Resource):
             import traceback
             traceback.print_exc()
             return {'message': 'Failed to generate analytics', 'error': str(e)}, 500
+        
+
 class AdminSummary(Resource):
     @auth_required('token')
     @roles_required('admin')

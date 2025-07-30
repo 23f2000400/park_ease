@@ -2,7 +2,9 @@ export default {
   template: `
   <div class="container py-5">
     <h2 class="mb-4 text-primary"><i class="fas fa-chart-line me-2"></i>Admin Summary Dashboard</h2>
-
+      <div class="text-end mb-3">
+            <button class="btn btn-outline-secondary" @click="sendMail">Send Monthly Activity Report</button>
+        </div>
     <div v-if="loading" class="text-center my-5">
       <div class="spinner-border text-primary"></div>
     </div>
@@ -173,6 +175,14 @@ export default {
       }
     },
 
+        sendMail(){
+          fetch('/api/mail')
+          .then(response => response.json())
+          .then(() => {
+            alert('Email sent successfully!');
+          });
+
+        },
  drawCharts() {
       // Generate distinct colors for pie chart segments
       const generatePieColors = (count) => {

@@ -15,7 +15,7 @@ from flask_caching import Cache
 
 from application.task import monthly_report , send_daily_reminders
 
-from application.extensions import cache  # ✅ Use this
+from application.extensions import cache  
 
 
 
@@ -36,7 +36,6 @@ def create_app():
     datastore = SQLAlchemyUserDatastore(db, User, Role)
     app.security = Security(app, datastore)
     app.app_context().push()
-    # Register blueprints or routes here if needed
 
     return app
 
@@ -46,21 +45,17 @@ celery = celery_init_app(app)
 celery.autodiscover_tasks()
 
 with app.app_context():
-    # Create all database tables
     db.create_all()
     print("Tables created:", db.metadata.tables.keys())
 
     try:
-        # Create roles if they don't exist
        
         app.security.datastore.find_or_create_role(name='admin', description='Administrator role')
         
         app.security.datastore.find_or_create_role(name='user', description='Regular user role')
 
-        # Commit the roles to the database
         db.session.commit()
 
-        # Create default admin user if it doesn't exist
         if not app.security.datastore.find_user(email="admin@gmail.com"):
             app.security.datastore.create_user(
                 email="admin@gmail.com",
@@ -73,7 +68,6 @@ with app.app_context():
                 fs_uniquifier=str(uuid.uuid4())
             )
 
-        # Create default regular user if it doesn't exist
         if not app.security.datastore.find_user(email="user@gmail.com"):
             app.security.datastore.create_user(
                 email="user@gmail.com",
@@ -100,7 +94,6 @@ from application.routes import *
 
 @celery.on_after_finalize.connect
 def setup_periodic_tasks(sender, **kwargs):
-    # Schedule the monthly report task to run on the first day of every month at 00:00
     sender.add_periodic_task(
         # crontab(hour=7, minute=0, day_of_month='1'),
         crontab(minute = '*/2'),

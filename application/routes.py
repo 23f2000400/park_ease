@@ -25,13 +25,12 @@ def catch_all(path):
 
 
 @app.route('/admin')
-@auth_required('token')  # Ensure only admin can access this route
+@auth_required('token')  
 @roles_required('admin')
 def admin_dashboard():
     """Admin dashboard route."""
     return "<h1>Welcome to the Admin Dashboard!</h1>"
 
-#app.route('/user')
 @app.route('/user')
 @auth_required('token')  # Ensure only authenticated users can access this route
 @roles_required('user')

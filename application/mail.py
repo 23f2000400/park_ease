@@ -8,7 +8,7 @@ from jinja2 import Template
 SMTP_SERVER_HOST = "localhost"
 SMTP_SERVER_PORT = 1025
 SENDER_ADDRESS = "parkease@donotreply.in"
-SENDER_PASSWORD = ""  # Keep blank if using local SMTP server without auth
+SENDER_PASSWORD = "" 
 
 def send_email(to_address, subject, message, content="html", attachment_file=None):
     msg = MIMEMultipart()
@@ -26,7 +26,7 @@ def send_email(to_address, subject, message, content="html", attachment_file=Non
             part = MIMEBase("application", "octet-stream")
             part.set_payload(attachment.read())
 
-        encoders.encode_base64(part)  # Email attachments are sent as base64 encoded
+        encoders.encode_base64(part) 
         part.add_header("Content-Disposition", f"attachment; filename={attachment_file}")
         msg.attach(part)
 

@@ -1,6 +1,7 @@
 export default {
   template: `
     <div class="container mt-4">
+
       <h2 class="text-primary mb-4"><i class="fas fa-chart-line me-2"></i>User Summary</h2>
 
       <div class="text-end mb-3">
@@ -81,8 +82,13 @@ methods: {
         .then(data => {
             window.location.href = `/api/user/export_result/${data.id}`;
         })
+        .then(() => {
+            alert("CSV export downloaded.");
+        })
         .catch(error => console.error('Error exporting CSV:', error));
     },
+    
+
  renderChart(stats) {
   const canvas = document.getElementById('usageChart');
   if (!canvas) {

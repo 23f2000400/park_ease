@@ -6,7 +6,7 @@ from datetime import datetime
 import uuid
 from enum import Enum
 
-from .database import db  # Importing db from the database module
+from .database import db 
 
 # Enum for status values
 class SpotStatus(Enum):
